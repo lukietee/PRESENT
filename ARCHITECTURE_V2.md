@@ -27,31 +27,33 @@ Four interconnected components working together:
            ┌────────────────────┐                               │
            │    SHARED BRAIN    │◄──────────────────────────────┘
            │                    │
-           │ Claude (LLM+tools) │
+           │ Gemini (LLM+tools) │
            │ Browser Agent      │
            │ System Prompt Eng. │
            └────────────────────┘
 ```
 
-**Key Insight:** Phone calls and video meetings are just different I/O adapters plugged into the same brain. Claude, the browser agent, and the tool system are shared — only the audio/video transport layer differs.
+**Key Insight:** Phone calls and video meetings are just different I/O adapters plugged into the same brain. Gemini, the browser agent, and the tool system are shared — only the audio/video transport layer differs.
 
 ---
 
 ## Tech Stack
 
+**Hackathon sponsor tracks:** Gemini (Google) + ElevenLabs
+
 | Component | Technology | Why |
 |-----------|-----------|-----|
 | **Telephony** | Twilio Programmable Voice + Media Streams | Industry standard, WebSocket audio streaming, real phone numbers |
 | **Speech-to-Text** | Deepgram (streaming + diarization) | ~300ms latency, WebSocket API, handles mu-law natively, speaker diarization for meetings |
-| **LLM Brain** | Claude API (Anthropic) | Streaming, tool use for browser agent, large context for meeting history |
+| **LLM Brain** | Gemini 2.5 Pro (Google) | Streaming, function calling for browser agent, 1M+ context for meeting history, hackathon sponsor track |
 | **Text-to-Speech** | ElevenLabs (WebSocket streaming, Turbo v2.5) | Voice cloning, low-latency streaming, natural sounding |
 | **Avatar Video** | HeyGen LiveAvatar (LITE mode) | Real-time lip-synced photorealistic avatar, WebRTC delivery, 1 credit/min |
 | **Avatar Transport** | LiveKit (WebRTC) | Low-latency video streaming from HeyGen to our system |
 | **Meeting Join** | Playwright (headed/headless) | Join Zoom/Meet/Teams via browser, inject camera+mic streams |
 | **Browser Automation** | Playwright | Headless Chrome, screenshots, full browser control for tool actions |
 | **Backend** | Node.js + Express + Socket.IO | Fast WebSocket handling, good streaming ecosystem |
-| **Frontend/Dashboard** | Next.js 14 (App Router) + Tailwind + shadcn/ui | Fast to build, great real-time support |
-| **Database** | SQLite (via Drizzle ORM) | Zero setup, enough for hackathon |
+| **Frontend/Dashboard** | Next.js (App Router) + Tailwind + shadcn/ui on **Vercel** | Fast to build, great real-time support, instant deploys |
+| **Database** | Neon Postgres (via Drizzle ORM) on **Vercel Marketplace** | Managed, serverless-friendly, free tier |
 | **Auth** | Simple token/password (hackathon scope) | Just enough to protect the dashboard |
 
 ---
@@ -74,7 +76,7 @@ interface Session {
   // Interruption: caller/participant started talking
   onBargeIn(): void;
 
-  // History: for Claude context
+  // History: for Gemini context
   getConversationHistory(): Message[];
 
   // Metadata
@@ -99,11 +101,14 @@ class BrainOrchestrator {
     // 2. Check if we should respond (always for phone, conditional for meetings)
     if (!this.shouldRespond(session, transcript)) return;
 
-    // 3. Send to Claude with streaming
-    const stream = await claude.stream({
-      system: session.getSystemPrompt(),
-      messages: session.getConversationHistory(),
-      tools: this.getAvailableTools()
+    // 3. Send to Gemini with streaming
+    const stream = await ai.models.generateContentStream({
+      model: 'gemini-2.5-pro',
+      contents: session.getConversationHistory(),
+      config: {
+        systemInstruction: session.getSystemPrompt(),
+        tools: [{ functionDeclarations: this.getAvailableTools() }]
+      }
     });
 
     // 4. Stream response → sentence chunking → TTS → session output
@@ -146,27 +151,27 @@ Caller speaks
   → Deepgram returns real-time transcript
   → Transcript streamed to Dashboard (live view)
   → Final transcript → BrainOrchestrator.handleTranscript()
-  → Claude responds (streaming tokens)
+  → Gemini responds (streaming tokens)
   → Tokens buffered into sentence chunks
   → Each sentence → ElevenLabs streaming TTS
   → TTS audio → converted to mu-law → Twilio → Caller
   → Response text streamed to Dashboard
 
-IF Claude needs information:
-  → Claude makes tool call (e.g., "check_google_drive")
+IF Gemini needs information:
+  → Gemini makes tool call (e.g., "check_google_drive")
   → Browser Agent receives task
   → Action sent to Dashboard for approval (if required)
   → User approves from Dashboard (or auto-approved)
   → Browser Agent executes action
-  → Result returned to Claude
-  → Claude incorporates info into response
+  → Result returned to Gemini
+  → Gemini incorporates info into response
   → Meanwhile, filler phrase plays: "Let me check on that real quick..."
 
 Step 4: HANG UP
 ────────────────────────────────────────────────────────
 Either party ends call
   → Full transcript saved to DB
-  → Claude generates call summary
+  → Gemini generates call summary
   → Dashboard updated with completed call
   → Notification sent to user (optional)
 ```
@@ -180,7 +185,7 @@ Either party ends call
 ```
 Caller speaks → [audio travels] .............. ~100ms
 Deepgram STT (streaming) ..................... ~300ms
-Claude API (time to first token) ............. ~500ms
+Gemini API (time to first token) ............. ~500ms
 Sentence buffer + ElevenLabs TTS ............. ~400ms
 Audio back to caller ......................... ~100ms
                                          ─────────────
@@ -190,7 +195,7 @@ Total ........................................ ~1.4s
 ### Streaming Strategy
 
 ```
-Claude tokens:  "Sure, | let me | check | the | project. | It looks | like..."
+Gemini tokens:  "Sure, | let me | check | the | project. | It looks | like..."
                                              |
                              Sentence boundary detected
                                              |
@@ -199,18 +204,18 @@ Claude tokens:  "Sure, | let me | check | the | project. | It looks | like..."
                    ElevenLabs TTS starts
                    generating audio for
                    "Sure, let me check the project."
-                   while Claude keeps generating
+                   while Gemini keeps generating
 ```
 
-Key: Don't wait for Claude's full response. Detect sentence boundaries (`. ? ! ,` with buffer) and send each sentence to TTS immediately.
+Key: Don't wait for Gemini's full response. Detect sentence boundaries (`. ? ! ,` with buffer) and send each sentence to TTS immediately.
 
 ### Audio Format Conversion — Phone Mode
 
 ```
 Twilio → Server:    mu-law 8kHz mono (base64 encoded)
 Server → Deepgram:  mu-law 8kHz mono (Deepgram accepts this natively)
-Server → Claude:    text (from Deepgram transcript)
-Claude → Server:    text
+Server → Gemini:    text (from Deepgram transcript)
+Gemini → Server:    text
 Server → ElevenLabs: text → returns PCM 24kHz audio
 ElevenLabs → Twilio: must convert PCM 24kHz → mu-law 8kHz base64
 ```
@@ -255,7 +260,7 @@ ElevenLabs → Twilio: must convert PCM 24kHz → mu-law 8kHz base64
          │ participant audio (PCM)                              ▲
          ▼                                                      │
 ┌─────────────────┐    ┌──────────────┐    ┌──────────────────────────┐
-│ Deepgram STT    │    │    Claude    │    │   HeyGen LiveAvatar      │
+│ Deepgram STT    │    │    Gemini    │    │   HeyGen LiveAvatar      │
 │ (streaming +    │───►│   (brain)    │───►│   (LITE mode)            │
 │  diarization)   │    │              │    │                          │
 │                 │    │  Tool calls  │    │  IN: base64 PCM audio    │
@@ -315,7 +320,7 @@ Participants speak
   → Deepgram returns transcript with speaker labels
   → "When to speak" logic evaluates (see below)
   → If triggered: BrainOrchestrator.handleTranscript()
-  → Claude generates response → ElevenLabs TTS (PCM 24kHz)
+  → Gemini generates response → ElevenLabs TTS (PCM 24kHz)
   → Audio sent two places:
      a) HeyGen WebSocket: agent.speak (base64 PCM) → lip-synced render
      b) Meeting browser: injected as mic audio
@@ -327,7 +332,7 @@ Step 6: LEAVE MEETING
 User clicks "Leave" on Dashboard OR meeting ends
   → POST /v1/sessions/stop (HeyGen)
   → Playwright clicks "Leave meeting" button
-  → Claude generates meeting summary
+  → Gemini generates meeting summary
   → Full transcript saved to DB
   → Dashboard updated
 ```
@@ -449,7 +454,7 @@ class LiveAvatarSession {
 ```
 Participants → Browser:   PCM 48kHz (Web Audio API capture)
 Browser → Deepgram:       PCM 16kHz (downsampled for STT)
-Claude → ElevenLabs:      text → returns PCM 24kHz mono
+Gemini → ElevenLabs:      text → returns PCM 24kHz mono
 ElevenLabs → HeyGen:      PCM 16-bit 24kHz mono, base64 (<=1MB packets)
 ElevenLabs → Meeting mic: PCM 48kHz (upsampled via Web Audio API)
 HeyGen → LiveKit:         H264 video stream (WebRTC)
@@ -462,7 +467,7 @@ Canvas → Meeting camera:  MediaStream captureStream(30)
 ```
 Participant speaks → [WebRTC + browser capture] ... ~200ms
 Deepgram STT (streaming + diarization) ........... ~400ms
-Claude API (time to first token) ................. ~500ms
+Gemini API (time to first token) ................. ~500ms
 Sentence buffer + ElevenLabs TTS ................. ~400ms
 HeyGen LiveAvatar lip-sync render ................ ~200ms
 WebRTC video back to meeting ..................... ~100ms
@@ -525,7 +530,7 @@ MEETING MODE RULES:
 
 ```
 ┌──────────────────────────────────────────────────┐
-│              Claude (Shared Brain)                │
+│              Gemini (Shared Brain)                │
 │                                                  │
 │  Tool calls:                                     │
 │  ┌────────────────────────────────────────────┐  │
@@ -550,7 +555,7 @@ MEETING MODE RULES:
 │  5. Execute via Playwright (SEPARATE context     │
 │     from the meeting browser tab)                │
 │  6. Screenshot current state → Dashboard         │
-│  7. Extract relevant info (Claude vision/parse)  │
+│  7. Extract relevant info (Gemini multimodal/parse) │
 │  8. Return structured result to brain            │
 └──────────────────────────────────────────────────┘
 ```
@@ -833,7 +838,7 @@ phoneclone/
 │   │   │
 │   │   ├── brain/                   # Shared orchestration layer
 │   │   │   ├── orchestrator.ts      # Mode-agnostic conversation loop
-│   │   │   ├── claude.ts            # Claude API with streaming + tools
+│   │   │   ├── gemini.ts             # Gemini API with streaming + function calling
 │   │   │   ├── system-prompt.ts     # Dynamic system prompt builder
 │   │   │   ├── tools.ts             # Tool definitions for browser agent
 │   │   │   └── session.ts           # Session interface + types
@@ -1004,7 +1009,7 @@ TWILIO_PHONE_NUMBER=              # Buy a number (~$1/month)
 
 DEEPGRAM_API_KEY=                 # deepgram.com → free tier available
 
-ANTHROPIC_API_KEY=                # console.anthropic.com
+GEMINI_API_KEY=                   # aistudio.google.com → API keys
 
 ELEVENLABS_API_KEY=               # elevenlabs.io
 ELEVENLABS_VOICE_ID=              # After cloning your voice
@@ -1067,19 +1072,89 @@ npm run dev                       # starts server (3001) + dashboard (3000)
 
 ---
 
+## Deployment Architecture
+
+The system is split across two deployment targets based on runtime requirements:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         VERCEL                                   │
+│                                                                  │
+│  Next.js Dashboard (App Router)                                  │
+│  ├── Pages: /, /call/[id], /meeting/[id], /meetings, /settings  │
+│  ├── API routes: proxy to backend server                         │
+│  ├── SSE/polling for real-time updates                           │
+│  └── Auth, static assets, SSR                                    │
+│                                                                  │
+│  Neon Postgres (via Vercel Marketplace)                          │
+│  └── calls, meetings, transcripts, contacts, settings            │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │ REST API
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│               DEDICATED SERVER (Railway / Fly.io / VPS)          │
+│                                                                  │
+│  Node.js + Express + Socket.IO                                   │
+│  ├── Twilio Media Streams (persistent WebSocket)                 │
+│  ├── Deepgram STT (persistent WebSocket per session)             │
+│  ├── ElevenLabs TTS (persistent WebSocket per session)           │
+│  ├── Gemini orchestrator (streaming + function calling)          │
+│  ├── HeyGen LiveAvatar (WebSocket + LiveKit WebRTC)              │
+│  ├── Playwright browser instances (meeting join + browser agent) │
+│  └── Socket.IO server (real-time events to dashboard)            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Why the split:**
+- Vercel Functions have a 300s max timeout — phone calls and meetings can last minutes to hours
+- Persistent WebSocket connections (Twilio, Deepgram, ElevenLabs, HeyGen) need a long-lived server process
+- Playwright requires a running browser instance (headed mode with Xvfb for meetings)
+- The dashboard is a perfect fit for Vercel: SSR, API routes, instant deploys, preview URLs
+
+---
+
+## Team Split
+
+### Person A: Dashboard + Frontend (Vercel)
+- Next.js app setup and deployment on Vercel
+- All dashboard pages and components (real-time monitoring, transcript view, approval flow)
+- Meeting scheduler UI + Google Calendar integration
+- Database schema + Drizzle ORM setup (Neon Postgres)
+- Auth implementation
+- API client for communicating with backend server
+- Socket.IO / SSE client for live updates
+
+### Person B: Voice Pipeline + Backend (Dedicated Server)
+- Node.js + Express server setup and deployment
+- Twilio webhook + media stream handling
+- Deepgram STT streaming integration
+- ElevenLabs TTS streaming + voice clone setup
+- Gemini orchestrator (system prompt engineering, function calling, sentence chunking)
+- Playwright meeting join + getUserMedia injection
+- HeyGen LiveAvatar session management + LiveKit video
+- Browser agent (Playwright tool execution)
+- Socket.IO server (emit events to dashboard)
+
+### Define Together First
+- **API contract:** REST endpoints + Socket.IO event names/payloads between dashboard and backend
+- **Database schema:** Agree on tables so both sides can read/write
+- **Session interface:** The shared `Session` type that both modes implement
+
+---
+
 ## Hackathon MVP Priorities
 
 ### Must Have (Demo-ready)
 
 | # | Feature | Mode |
 |---|---------|------|
-| 1 | Voice pipeline end-to-end (call → STT → Claude → TTS → response) | Phone |
+| 1 | Voice pipeline end-to-end (call → Deepgram STT → Gemini → ElevenLabs TTS → response) | Phone |
 | 2 | ElevenLabs voice clone sounding natural on phone | Phone |
 | 3 | At least one browser agent action (Google Drive lookup) | Shared |
 | 4 | Dashboard showing live transcript + action approvals | Shared |
 | 5 | HeyGen LiveAvatar lip-synced to ElevenLabs audio output | Meeting |
 | 6 | Join Google Meet via Playwright + inject avatar as camera | Meeting |
-| 7 | Capture meeting audio → STT → Claude responds when addressed | Meeting |
+| 7 | Capture meeting audio → STT → Gemini responds when addressed | Meeting |
 | 8 | Dashboard shows both phone calls and meetings simultaneously | Shared |
 
 ### Nice to Have
@@ -1118,7 +1193,7 @@ npm run dev                       # starts server (3001) + dashboard (3000)
 | **Multiple speakers talking simultaneously** | Confused STT / wrong responses | Deepgram diarization, only respond when name detected, debounce |
 | **Browser agent too slow during meeting** | Awkward silence while looking things up | Shorter filler phrase ("one sec"), cache recent lookups, parallel tool execution |
 | **Twilio webhook needs public URL** | Can't test phone mode locally | ngrok for dev, Railway/Fly.io for demo |
-| **Claude tool calls during meeting** | Avatar stays silent too long | Start response immediately, append tool results as follow-up sentence |
+| **Gemini function calls during meeting** | Avatar stays silent too long | Start response immediately, append tool results as follow-up sentence |
 
 ---
 

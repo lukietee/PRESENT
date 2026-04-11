@@ -31,34 +31,48 @@
 | HeyGen avatar video latency | Pre-warm session before meeting join |
 | Browser agent too slow | Filler phrase while loading, extract text not screenshots |
 
+## Demo Setup
+
+```
+You have:
+  - Your phone (dashboard open in browser)
+  - Your laptop (Google Meet left half, Browser Agent right half)
+  - Your friend (their phone + joins Google Meet from their laptop)
+```
+
 ## Demo Script (3-4 minutes)
 
 ### Act 1: The Phone Call (1 min)
 
-1. Show dashboard — empty, waiting
-2. Call the Twilio number from another phone
-3. "Hey, where are we on the capstone?"
+1. Hold up phone — dashboard is empty, waiting
+2. Friend calls your Twilio number from their phone
+3. Friend: "Hey, where are we on the capstone?"
 4. AI responds naturally in your cloned voice
-5. Browser agent checks GitHub: "Let me check... Auth middleware is done, dashboard is 80% complete"
-6. End call — dashboard shows ended
+5. Laptop screen: judges watch Playwright open GitHub in real time
+6. AI: "Let me check... Auth middleware is done, dashboard is 80% complete"
+7. Phone: dashboard shows the live transcript updating as they talk
+8. End call
 
 > "That's the phone. But what about the 9am standup I slept through?"
 
 ### Act 2: The Meeting Avatar (2 min) — The Wow Factor
 
-1. Dashboard: paste a Google Meet URL → "Join Now"
-2. Switch to the actual Google Meet (on another screen):
+1. On phone dashboard: paste a Google Meet URL → "Join Now"
+2. Point to laptop — left half shows Google Meet:
    - Avatar appears on camera — photorealistic, your face
-3. Teammate: "Lucas, what did you work on yesterday?"
+   - Friend is already in the Meet on their laptop
+3. Friend: "Lucas, what did you work on yesterday?"
 4. Avatar responds with synced lip movement:
    "Yeah so yesterday I pushed the auth middleware and fixed that CORS bug. Today I'm gonna finish the dashboard. No blockers."
-5. Dashboard shows live transcript updating in real-time
-6. Avatar stays quiet when not addressed
+5. Phone: dashboard shows meeting transcript updating live
+6. Friend: "Can you check if my branch has conflicts?"
+7. Laptop right half: judges watch Playwright open GitHub repo in real time
+8. Avatar: "One sec let me check... yeah you've got two conflicts in routes/auth.js"
+9. Avatar stays quiet when not addressed
 
 > "I was asleep the whole time. Nobody knew the difference."
 
-### Act 3: Unified View (30 sec)
+### Act 3: Closing (30 sec)
 
-1. Show both a phone call and meeting active on dashboard simultaneously
-2. "Same brain, same voice, two completely different modes."
-3. "PhoneClone. Never miss a call — or a meeting — again."
+1. "Same brain, same voice clone, same browser agent — two completely different modes."
+2. "PhoneClone. Never miss a call — or a meeting — again."

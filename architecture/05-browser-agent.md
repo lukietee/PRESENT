@@ -1,6 +1,6 @@
 # Browser Agent
 
-A **separate** Playwright browser instance (headless) that Gemini uses to look things up in real time. This runs independently from the meeting browser tab.
+A **separate** Playwright browser instance (**headed / visible**) that Gemini uses to look things up in real time. This runs independently from the meeting browser tab. Judges can see the browser navigating in real time on the laptop screen.
 
 ## How It Works
 
@@ -24,7 +24,10 @@ class BrowserAgent {
   private context: BrowserContext;
 
   async init() {
-    this.browser = await chromium.launch({ headless: true });
+    this.browser = await chromium.launch({
+      headless: false,  // Visible — judges watch the agent browse in real time
+      args: ['--window-size=800,600', '--window-position=960,0']  // Right half of screen
+    });
     this.context = await this.browser.newContext();
   }
 
@@ -78,6 +81,24 @@ class BrowserAgent {
 
 - **Separate browser context** from the meeting tab — the agent browsing Google Drive should never interfere with the meeting
 - **All actions auto-approved** — no approval UI for the hackathon. Every tool call just runs.
-- **Headless mode** — no need to see the agent browser, it runs in the background
+- **Headed mode (visible)** — the browser agent window is shown on the right half of the laptop screen so judges can watch it navigate in real time. This is a huge demo flex.
 - **Text extraction over screenshots** — faster and simpler. Use `page.innerText()` instead of screenshot + vision model. Fall back to screenshots only if text extraction fails.
 - **Pre-authenticated sessions** — for the demo, log into Google/GitHub in the browser context beforehand so the agent can access your Drive, repos, etc.
+
+## Demo Setup — Laptop Screen Layout
+
+```
+┌───────────────────────┬───────────────────────┐
+│                       │                       │
+│     Google Meet       │    Browser Agent      │
+│   (avatar visible     │   (Playwright —       │
+│    to participants)   │    judges watch it    │
+│                       │    open GitHub,       │
+│                       │    Google Drive, etc) │
+│                       │                       │
+└───────────────────────┴───────────────────────┘
+         Left half              Right half
+
+Phone (in hand): Dashboard with live transcript
+Friend's phone:  Calls your Twilio number / joins Google Meet
+```

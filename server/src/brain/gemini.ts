@@ -58,12 +58,12 @@ const toolDeclarations = [
   },
   {
     name: "list_files",
-    description: "Search for files on the computer (Desktop, Documents, Downloads). Use this to find documents, spreadsheets, etc.",
+    description: "Search for files across the computer (Desktop, Documents, Downloads, and home folder). Use this whenever the caller mentions a document, file, report, spreadsheet, etc. Search with keywords from what the caller said — e.g. if they say 'the quarterly report', search for 'quarterly' or 'report'.",
     parameters: {
       type: "object" as const,
       properties: {
-        directory: { type: "string" as const, description: "Base directory to search (default: user home)" },
-        search: { type: "string" as const, description: "Filename to search for (partial match)" },
+        directory: { type: "string" as const, description: "Specific directory to search (optional, searches common folders by default)" },
+        search: { type: "string" as const, description: "Keywords to search for in filename/path (partial match, e.g. 'report', 'budget', 'project')" },
       },
     },
   },

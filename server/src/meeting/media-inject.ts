@@ -33,55 +33,78 @@ function buildMeetingMediaInitScript(): string {
   const MIC_SOURCES_KEY = ${JSON.stringify(kMicSources)};
   const PUSH_NAME = ${JSON.stringify(kPush)};
 
-  const canvas = document.createElement("canvas");
-  canvas.width = 1280;
-  canvas.height = 720;
-  const ctx2d = canvas.getContext("2d");
-  if (ctx2d) {
-    ctx2d.fillStyle = "#222222";
-    ctx2d.fillRect(0, 0, 1280, 720);
-  }
-  canvas.style.position = "fixed";
-  canvas.style.left = "-9999px";
-  canvas.style.top = "0";
-  canvas.style.width = "1px";
-  canvas.style.height = "1px";
-  canvas.style.opacity = "0.01";
-  canvas.style.pointerEvents = "none";
-  if (document.documentElement) {
-    document.documentElement.appendChild(canvas);
-  }
+  // getUserMedia override must be set up immediately (before Meet requests media),
+  // but defer heavy objects (AudioContext, canvas append) until they're first needed.
+  var _canvas = null;
+  var _ctx2d = null;
+  var _dest = null;
+  var _audioCtxReady = false;
 
-  window[CANVAS_KEY] = canvas;
-  window[CTX_KEY] = ctx2d;
-
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  const audioCtx = new AudioCtx({ sampleRate: 48000 });
-  const destination = audioCtx.createMediaStreamDestination();
-  window[DEST_KEY] = destination;
-  window[MIC_SOURCES_KEY] = [];
-
-  const origGetUserMedia = navigator.mediaDevices.getUserMedia.bind(
-    navigator.mediaDevices
-  );
-  navigator.mediaDevices.getUserMedia = async function (constraints) {
-    const c =
-      constraints && typeof constraints === "object" ? constraints : {};
-    const wantVideo = !!c.video;
-    const wantAudio = !!c.audio;
-    if (!wantVideo && !wantAudio) {
-      return origGetUserMedia(constraints);
+  function ensureCanvas() {
+    if (_canvas) return _canvas;
+    _canvas = document.createElement("canvas");
+    _canvas.width = 1280;
+    _canvas.height = 720;
+    _ctx2d = _canvas.getContext("2d");
+    if (_ctx2d) {
+      _ctx2d.fillStyle = "#222222";
+      _ctx2d.fillRect(0, 0, 1280, 720);
     }
-    const stream = new MediaStream();
+    _canvas.style.position = "fixed";
+    _canvas.style.left = "-9999px";
+    _canvas.style.top = "0";
+    _canvas.style.width = "1px";
+    _canvas.style.height = "1px";
+    _canvas.style.opacity = "0.01";
+    _canvas.style.pointerEvents = "none";
+    if (document.documentElement) {
+      document.documentElement.appendChild(_canvas);
+    }
+    window[CANVAS_KEY] = _canvas;
+    window[CTX_KEY] = _ctx2d;
+    return _canvas;
+  }
+
+  function ensureAudioDest() {
+    if (_dest) return _dest;
+    var AudioCtx = window.AudioContext || window.webkitAudioContext;
+    var audioCtx = new AudioCtx({ sampleRate: 48000 });
+    _dest = audioCtx.createMediaStreamDestination();
+    window[DEST_KEY] = _dest;
+    window[MIC_SOURCES_KEY] = [];
+    _audioCtxReady = true;
+    return _dest;
+  }
+
+  // Override on the PROTOTYPE so it works even if navigator.mediaDevices
+  // isn't initialized yet, and can't be bypassed by cached references.
+  var _origGUM = null;
+  try {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      _origGUM = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    }
+  } catch(e) {}
+
+  var fakeGetUserMedia = async function (constraints) {
+    var c =
+      constraints && typeof constraints === "object" ? constraints : {};
+    var wantVideo = !!c.video;
+    var wantAudio = !!c.audio;
+    if (!wantVideo && !wantAudio) {
+      if (_origGUM) return _origGUM(constraints);
+      throw new Error("No media requested");
+    }
+    console.log("[present] getUserMedia override called, video=" + wantVideo + " audio=" + wantAudio);
+    var stream = new MediaStream();
     if (wantVideo) {
-      const cnv = window[CANVAS_KEY];
-      const vStream = cnv.captureStream(30);
+      var cnv = ensureCanvas();
+      var vStream = cnv.captureStream(30);
       vStream.getVideoTracks().forEach(function (t) {
         stream.addTrack(t);
       });
     }
     if (wantAudio) {
-      const dest = window[DEST_KEY];
+      var dest = ensureAudioDest();
       dest.stream.getAudioTracks().forEach(function (t) {
         stream.addTrack(t);
       });
@@ -89,12 +112,36 @@ function buildMeetingMediaInitScript(): string {
     return stream;
   };
 
+  // Override on instance if available
+  try {
+    if (navigator.mediaDevices) {
+      navigator.mediaDevices.getUserMedia = fakeGetUserMedia;
+    }
+  } catch(e) {}
+
+  // Override on prototype for robustness
+  try {
+    if (typeof MediaDevices !== "undefined" && MediaDevices.prototype) {
+      MediaDevices.prototype.getUserMedia = fakeGetUserMedia;
+    }
+  } catch(e) {}
+
+  // Also override the legacy API
+  try {
+    if (navigator.getUserMedia) {
+      navigator.getUserMedia = function(c, ok, err) {
+        fakeGetUserMedia(c).then(ok).catch(err);
+      };
+    }
+  } catch(e) {}
+
   window.__presentAttachRemoteAudio = function (track) {
     if (!track || track.kind !== "audio") return;
-    const ctx16 = new AudioCtx({ sampleRate: 16000 });
-    const src = ctx16.createMediaStreamSource(new MediaStream([track]));
-    const proc = ctx16.createScriptProcessor(4096, 1, 1);
-    const gain = ctx16.createGain();
+    var AudioCtx = window.AudioContext || window.webkitAudioContext;
+    var ctx16 = new AudioCtx({ sampleRate: 16000 });
+    var src = ctx16.createMediaStreamSource(new MediaStream([track]));
+    var proc = ctx16.createScriptProcessor(4096, 1, 1);
+    var gain = ctx16.createGain();
     gain.gain.value = 0;
     src.connect(proc);
     proc.connect(gain);
@@ -116,7 +163,7 @@ function buildMeetingMediaInitScript(): string {
     };
   };
 
-  const OrigRTC = window.RTCPeerConnection;
+  var OrigRTC = window.RTCPeerConnection;
   if (typeof OrigRTC === "function") {
     window.RTCPeerConnection = new Proxy(OrigRTC, {
       construct: function (Target, args, newTarget) {

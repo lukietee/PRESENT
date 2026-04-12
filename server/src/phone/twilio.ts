@@ -101,12 +101,14 @@ export function attachMediaStream(httpServer: HttpServer, io: SocketIOServer) {
           io.emit("call:start", { id: callSid, callerNumber: "unknown" });
           createDeepgramStream(callSid, io);
 
-          // Greet the caller
-          synthesize("Hello?").then((audio) => {
-            sendAudioToTwilio(callSid, audio);
-            io.emit("call:transcript", { role: "agent", content: "Hello?" });
-            appendCallTranscript(callSid, { role: "agent", content: "Hello?" });
-          }).catch(() => {});
+          // Greet the caller — short delay so the audio channel is ready
+          setTimeout(() => {
+            synthesize("Hello?").then((audio) => {
+              sendAudioToTwilio(callSid, audio);
+              io.emit("call:transcript", { role: "agent", content: "Hello?" });
+              appendCallTranscript(callSid, { role: "agent", content: "Hello?" });
+            }).catch(() => {});
+          }, 800);
           break;
 
         case "media": {

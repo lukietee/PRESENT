@@ -47,8 +47,8 @@ export const config = {
       process.env.MEET_USE_CHROME_CHANNEL === "1" ||
       process.env.MEET_USE_CHROME_CHANNEL === "true",
     phoneParity:
-      process.env.MEETING_PHONE_PARITY === "1" ||
-      (process.env.MEETING_PHONE_PARITY || "").trim().toLowerCase() === "true",
+      process.env.MEETING_PHONE_PARITY !== "0" &&
+      process.env.MEETING_PHONE_PARITY !== "false",
     /** Optional full User-Agent string (recent desktop Chrome). */
     userAgent: (process.env.MEET_USER_AGENT || "").trim(),
     /**

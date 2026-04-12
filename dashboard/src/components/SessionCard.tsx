@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Phone, Video, Copy, Check } from "lucide-react";
+import { Phone, Video, Copy, Check, Maximize2, X } from "lucide-react";
 import { LiveTranscript, lineLabel } from "@/components/LiveTranscript";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useElapsed } from "@/hooks/useElapsed";
@@ -58,6 +58,7 @@ export function SessionCard(props: SessionCardProps) {
   const label = isPhone ? "Phone" : "Meeting";
   const elapsed = useElapsed(startedAt ?? null);
   const [copied, setCopied] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
 
   function handleCopy() {
     const text = messages
@@ -75,16 +76,18 @@ export function SessionCard(props: SessionCardProps) {
 
   const iconColor = isPhone ? "text-accent-phone" : "text-accent-meeting";
 
-  return (
-    <section
-      className={[
+  const containerClass = fullscreen
+    ? "fixed inset-0 z-50 flex flex-col bg-background"
+    : [
         "card-interactive card-interactive-hover w-full overflow-hidden rounded-2xl border border-border bg-card shadow-card",
         className ?? "",
       ]
         .filter(Boolean)
-        .join(" ")}
-    >
-      <div className={`${headerBg} px-5 py-4`}>
+        .join(" ");
+
+  return (
+    <section className={containerClass}>
+      <div className={`${headerBg} px-5 py-4 ${fullscreen ? "" : ""}`}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Icon size={15} className={iconColor} strokeWidth={2} />
@@ -103,6 +106,14 @@ export function SessionCard(props: SessionCardProps) {
             ) : (
               <StatusBadge variant="meeting" status={status} />
             )}
+            <button
+              type="button"
+              onClick={() => setFullscreen(!fullscreen)}
+              className="ml-1 text-subtle transition-colors hover:text-muted-foreground"
+              title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+            >
+              {fullscreen ? <X size={15} /> : <Maximize2 size={13} />}
+            </button>
           </div>
         </div>
         {subtitle && (
@@ -115,7 +126,7 @@ export function SessionCard(props: SessionCardProps) {
         )}
       </div>
 
-      <div className="border-t border-header-border px-4 py-3">
+      <div className={`border-t border-header-border px-4 py-3 ${fullscreen ? "flex-1 flex flex-col min-h-0" : ""}`}>
         <div className="mb-2 flex items-center justify-between">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-subtle">
             Live Transcript
@@ -131,10 +142,15 @@ export function SessionCard(props: SessionCardProps) {
             </button>
           )}
         </div>
-        <LiveTranscript messages={messages} onApproveTool={onApproveTool} onDenyTool={onDenyTool} />
+        <LiveTranscript
+          messages={messages}
+          onApproveTool={onApproveTool}
+          onDenyTool={onDenyTool}
+          className={fullscreen ? "!max-h-none flex-1" : undefined}
+        />
       </div>
 
-      <div className="flex items-center gap-2 border-t border-header-border px-4 py-3">
+      <div className={`flex items-center gap-2 border-t border-header-border px-4 py-3 ${fullscreen ? "pb-[env(safe-area-inset-bottom,0.75rem)]" : ""}`}>
         <button
           type="button"
           onClick={onAction}

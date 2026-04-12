@@ -1,11 +1,23 @@
 import { config } from "../config.js";
 
+let activeVoiceId = config.elevenlabs.voiceId;
+
+export function setActiveVoiceId(id: string): void {
+  activeVoiceId = id;
+  console.log(`[elevenlabs] Voice ID updated to: ${id}`);
+}
+
+export function getActiveVoiceId(): string {
+  return activeVoiceId;
+}
+
 /**
  * Synthesize text to mu-law 8kHz audio via ElevenLabs REST streaming endpoint.
  * Returns the full audio as a Buffer (already in mu-law format — no conversion needed).
  */
 export async function synthesize(text: string): Promise<Buffer> {
-  const { apiKey, voiceId } = config.elevenlabs;
+  const apiKey = config.elevenlabs.apiKey;
+  const voiceId = activeVoiceId;
   const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=ulaw_8000`;
 
   const res = await fetch(url, {
@@ -38,7 +50,8 @@ export async function synthesize(text: string): Promise<Buffer> {
  * Synthesize text to raw PCM s16le mono 24kHz for meeting / HeyGen paths.
  */
 export async function synthesizeMeetingPcm24k(text: string): Promise<Buffer> {
-  const { apiKey, voiceId } = config.elevenlabs;
+  const apiKey = config.elevenlabs.apiKey;
+  const voiceId = activeVoiceId;
   const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=pcm_24000`;
 
   const res = await fetch(url, {

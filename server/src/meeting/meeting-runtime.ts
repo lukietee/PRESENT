@@ -66,8 +66,8 @@ export function installMeetingRuntime(): void {
 
       meetPage = browserCtx.pages()[0] ?? (await browserCtx.newPage());
 
-      console.log("[meeting-runtime] waiting 3s before navigating to Meet…");
-      await new Promise((r) => setTimeout(r, 3000));
+      console.log("[meeting-runtime] waiting 6s before navigating to Meet…");
+      await new Promise((r) => setTimeout(r, 6000));
       await joinGoogleMeet(meetPage, url);
 
       avatar = new LiveAvatarSession();

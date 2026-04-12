@@ -7,48 +7,34 @@ export type StatusBadgeProps =
   | { variant: "phone"; status: PhoneSessionStatus }
   | { variant: "meeting"; status: MeetingSessionStatus };
 
-const basePill =
-  "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide";
-
-function stylesForStatus(
-  status: PhoneSessionStatus | MeetingSessionStatus
-): string {
-  switch (status) {
-    case "joining":
-      return "border-zinc-200 bg-zinc-100 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400";
-    case "active":
-      return "border-emerald-200/90 bg-emerald-50/90 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300";
-    case "ended":
-      return "border-zinc-200 bg-zinc-50 text-rose-700/90 dark:border-zinc-800 dark:bg-zinc-950 dark:text-rose-400/90";
-    default: {
-      const _exhaustive: never = status;
-      return _exhaustive;
-    }
-  }
-}
-
-function labelForStatus(
-  status: PhoneSessionStatus | MeetingSessionStatus
-): string {
-  switch (status) {
-    case "joining":
-      return "JOINING";
-    case "active":
-      return "LIVE";
-    case "ended":
-      return "ENDED";
-    default: {
-      const _exhaustive: never = status;
-      return _exhaustive;
-    }
-  }
-}
-
 export function StatusBadge(props: StatusBadgeProps) {
   const { status } = props;
+
+  if (status === "active") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-400">
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+        </span>
+        Live
+      </span>
+    );
+  }
+
+  if (status === "joining") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+        <span className="h-2.5 w-2.5 animate-spin rounded-full border border-amber-400 border-t-transparent" />
+        Joining
+      </span>
+    );
+  }
+
+  // ended
   return (
-    <span className={`${basePill} ${stylesForStatus(status)}`}>
-      {labelForStatus(status)}
+    <span className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-800/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+      Ended
     </span>
   );
 }

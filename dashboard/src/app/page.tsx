@@ -1,26 +1,33 @@
-import { HourZeroStatus } from "@/components/HourZeroStatus";
-import { SessionMockSection } from "@/components/SessionMockSection";
+import { ConnectionStatus } from "@/components/ConnectionStatus";
+import { ActiveSessionsSection } from "@/components/ActiveSessionsSection";
 
 export default function Home() {
   return (
-    <div className="flex min-h-full flex-1 flex-col items-center bg-zinc-50 px-6 py-16 font-sans dark:bg-black">
-      <main className="flex w-full max-w-3xl flex-col items-center gap-10">
-        <div className="text-center">
-          <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Present
+    <div className="flex min-h-full flex-1 flex-col bg-zinc-900 font-sans">
+      <header className="sticky top-0 z-10 border-b border-zinc-700/60 bg-zinc-900/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+          <div className="flex items-center gap-3">
+            <span className="text-lg font-semibold tracking-tight text-zinc-100">
+              Present
+            </span>
+            <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-zinc-400">
+              Live
+            </span>
+          </div>
+          <ConnectionStatus />
+        </div>
+      </header>
+
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">
+            Active Sessions
           </h1>
-          <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-            Hour 1.5 — mock active sessions below. Socket.IO smoke test stays on the page until
-            hour 2 wiring.
+          <p className="mt-1 text-sm text-zinc-500">
+            Real-time calls and meetings in progress
           </p>
         </div>
-        <HourZeroStatus />
-        <section className="flex w-full max-w-xl flex-col gap-4">
-          <h2 className="text-center text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            Active sessions
-          </h2>
-          <SessionMockSection />
-        </section>
+        <ActiveSessionsSection />
       </main>
     </div>
   );

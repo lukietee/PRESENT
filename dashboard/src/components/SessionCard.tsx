@@ -1,5 +1,6 @@
 "use client";
 
+import { Phone, Video } from "lucide-react";
 import { LiveTranscript } from "@/components/LiveTranscript";
 import { StatusBadge } from "@/components/StatusBadge";
 import type {
@@ -13,6 +14,8 @@ type SessionCardBase = {
   actionLabel: string;
   onAction: () => void;
   actionDisabled?: boolean;
+  secondaryLabel?: string;
+  onSecondaryAction?: () => void;
   className?: string;
 };
 
@@ -28,9 +31,6 @@ export type SessionCardProps =
       subtitle: string;
     });
 
-const headingClass =
-  "text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
-
 export function SessionCard(props: SessionCardProps) {
   const {
     variant,
@@ -40,53 +40,83 @@ export function SessionCard(props: SessionCardProps) {
     actionLabel,
     onAction,
     actionDisabled,
+    secondaryLabel,
+    onSecondaryAction,
     className,
   } = props;
 
-  const label = variant === "phone" ? "Phone" : "Meeting";
+  const isPhone = variant === "phone";
+  const Icon = isPhone ? Phone : Video;
+  const label = isPhone ? "Phone" : "Meeting";
+
+  const headerGradient = isPhone
+    ? "from-emerald-950/70 to-zinc-800"
+    : "from-violet-950/70 to-zinc-800";
+
+  const iconColor = isPhone ? "text-emerald-400" : "text-violet-400";
 
   return (
     <section
       className={[
-        "w-full max-w-xl rounded-xl border border-zinc-200 bg-zinc-50 p-6 text-left dark:border-zinc-800 dark:bg-zinc-950",
+        "w-full overflow-hidden rounded-2xl border border-zinc-700/50 bg-zinc-800 shadow-xl",
         className ?? "",
       ]
         .filter(Boolean)
         .join(" ")}
     >
-      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <h2 className={headingClass}>{label}</h2>
+      {/* Header strip */}
+      <div className={`bg-gradient-to-r ${headerGradient} px-5 py-4`}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Icon size={15} className={iconColor} strokeWidth={2} />
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
+              {label}
+            </span>
+          </div>
           {variant === "phone" ? (
             <StatusBadge variant="phone" status={status} />
           ) : (
             <StatusBadge variant="meeting" status={status} />
           )}
         </div>
-        {subtitle ? (
+        {subtitle && (
           <p
-            className="max-w-full min-w-0 flex-1 basis-full text-right text-xs font-medium text-zinc-600 truncate sm:basis-auto sm:max-w-[50%] dark:text-zinc-400"
+            className="mt-1.5 truncate font-mono text-xs text-zinc-500"
             title={subtitle}
           >
             {subtitle}
           </p>
-        ) : null}
-      </header>
-
-      <div className="mt-4">
-        <LiveTranscript messages={messages} className="max-w-none" />
+        )}
       </div>
 
-      <footer className="mt-4">
+      {/* Transcript */}
+      <div className="border-t border-zinc-700/60 px-4 py-3">
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
+          Live Transcript
+        </p>
+        <LiveTranscript messages={messages} />
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center gap-2 border-t border-zinc-700/60 px-4 py-3">
         <button
           type="button"
           onClick={onAction}
           disabled={actionDisabled}
-          className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-800 shadow-sm transition-colors hover:border-emerald-300/80 hover:bg-emerald-50/60 hover:text-emerald-900 disabled:pointer-events-none disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/35 dark:hover:text-emerald-200"
+          className="flex-1 rounded-lg border border-rose-900/60 bg-rose-950/30 px-4 py-2 text-xs font-semibold text-rose-400 transition-colors hover:border-rose-700/60 hover:bg-rose-950/50 hover:text-rose-300 disabled:pointer-events-none disabled:opacity-40"
         >
           {actionLabel}
         </button>
-      </footer>
+        {secondaryLabel && onSecondaryAction && (
+          <button
+            type="button"
+            onClick={onSecondaryAction}
+            className="rounded-lg border border-zinc-700/60 bg-zinc-800/40 px-3 py-2 text-xs font-medium text-zinc-400 transition-colors hover:border-zinc-600 hover:bg-zinc-800/70 hover:text-zinc-300"
+          >
+            {secondaryLabel}
+          </button>
+        )}
+      </div>
     </section>
   );
 }

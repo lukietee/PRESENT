@@ -2,34 +2,25 @@
 
 import { useCallback, useState } from "react";
 import { SessionCard } from "@/components/SessionCard";
+import {
+  initialMockActiveCall,
+  initialMockActiveMeeting,
+  mockCallToSessionCardFields,
+  mockMeetingToSessionCardFields,
+} from "@/lib/mockSessions";
 import type { TranscriptLine } from "@/types/session";
 
-const initialPhone: TranscriptLine[] = [
-  {
-    role: "caller",
-    content: "Hey can you check where we're at on the capstone?",
-  },
-  {
-    role: "agent",
-    content: "Yeah for sure, let me pull that up...",
-  },
-];
+const btnClass =
+  "rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-900";
 
-const initialMeeting: TranscriptLine[] = [
-  {
-    role: "participant",
-    content: "Lucas, what did you work on yesterday?",
-    speaker: "Jake",
-  },
-  {
-    role: "agent",
-    content: "I pushed the auth middleware and fixed that CORS bug",
-  },
-];
-
-/** Mock data so hour 0.5 components are visible before Socket.IO wiring (hour 2). */
+/** Hour 1.5: mock active call + meeting cards; swap for useSocket state in hour 2. */
 export function SessionMockSection() {
-  const [phoneLines, setPhoneLines] = useState(initialPhone);
+  const [phoneLines, setPhoneLines] = useState<TranscriptLine[]>(() => [
+    ...initialMockActiveCall.transcript,
+  ]);
+  const [meetingLines, setMeetingLines] = useState<TranscriptLine[]>(() => [
+    ...initialMockActiveMeeting.transcript,
+  ]);
 
   const appendPhoneLine = useCallback(() => {
     setPhoneLines((prev) => [
@@ -41,36 +32,57 @@ export function SessionMockSection() {
     ]);
   }, []);
 
+  const appendMeetingLine = useCallback(() => {
+    setMeetingLines((prev) => [
+      ...prev,
+      {
+        role: "participant",
+        content: `Extra line ${prev.length + 1} — transcript should scroll to bottom.`,
+        speaker: "Jake",
+      },
+    ]);
+  }, []);
+
+  const phoneFields = mockCallToSessionCardFields({
+    ...initialMockActiveCall,
+    transcript: phoneLines,
+  });
+  const meetingFields = mockMeetingToSessionCardFields({
+    ...initialMockActiveMeeting,
+    transcript: meetingLines,
+  });
+
   return (
     <div className="flex w-full flex-col items-center gap-6">
       <p className="w-full text-center text-xs text-zinc-500 dark:text-zinc-400">
-        Hour 0.5 — SessionCard / LiveTranscript / StatusBadge (mock data)
+        Mock payloads match architecture/07-api-contract.md until live Socket.IO events.
       </p>
       <SessionCard
         variant="phone"
-        status="active"
-        subtitle="+1 (555) 010-4242"
-        messages={phoneLines}
+        status={phoneFields.status}
+        subtitle={phoneFields.subtitle}
+        messages={phoneFields.messages}
         actionLabel="End Call"
         onAction={() => {}}
       />
       <div className="flex justify-center">
-        <button
-          type="button"
-          onClick={appendPhoneLine}
-          className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-900"
-        >
+        <button type="button" onClick={appendPhoneLine} className={btnClass}>
           Add phone line (scroll test)
         </button>
       </div>
       <SessionCard
         variant="meeting"
-        status="joining"
-        subtitle="https://meet.google.com/abc-defg-hij"
-        messages={initialMeeting}
+        status={meetingFields.status}
+        subtitle={meetingFields.subtitle}
+        messages={meetingFields.messages}
         actionLabel="Leave Meeting"
         onAction={() => {}}
       />
+      <div className="flex justify-center">
+        <button type="button" onClick={appendMeetingLine} className={btnClass}>
+          Add meeting line (scroll test)
+        </button>
+      </div>
     </div>
   );
 }

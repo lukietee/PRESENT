@@ -24,7 +24,7 @@ export function JoinMeetingPanel({ onJoin, disabled }: JoinMeetingPanelProps) {
 
   return (
     <section className="card-interactive card-interactive-hover w-full overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-      <div className="bg-gradient-to-r from-[var(--meeting-gradient-from)] to-[var(--meeting-gradient-to)] px-5 py-4">
+      <div className="bg-[var(--meeting-header-bg)] px-5 py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Video size={15} className="text-accent-meeting" strokeWidth={2} />

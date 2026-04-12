@@ -22,6 +22,7 @@ export type ActiveCall = {
   callerNumber: string;
   transcript: TranscriptLine[];
   status: PhoneSessionStatus;
+  startedAt: number;
 };
 
 export type ActiveMeeting = {
@@ -29,6 +30,7 @@ export type ActiveMeeting = {
   meetingUrl: string;
   transcript: TranscriptLine[];
   status: MeetingSessionStatus;
+  startedAt: number | null;
 };
 
 export function useSocket() {
@@ -53,12 +55,13 @@ export function useSocket() {
         callerNumber: payload.callerNumber,
         transcript: [],
         status: "active",
+        startedAt: Date.now(),
       });
 
-    const onCallTranscript = (payload: { role: string; content: string }) =>
+    const onCallTranscript = (payload: { role: string; content: string; timestamp?: string }) =>
       setActiveCall((prev) =>
         prev
-          ? { ...prev, transcript: [...prev.transcript, { role: payload.role, content: payload.content }] }
+          ? { ...prev, transcript: [...prev.transcript, { role: payload.role, content: payload.content, timestamp: payload.timestamp ?? new Date().toISOString() }] }
           : prev,
       );
 
@@ -71,17 +74,19 @@ export function useSocket() {
         meetingUrl: payload.meetingUrl,
         transcript: [],
         status: "joining",
+        startedAt: null,
       });
 
     const onMeetingActive = (_payload: { id: string }) =>
       setActiveMeeting((prev) =>
-        prev ? { ...prev, status: "active" } : prev,
+        prev ? { ...prev, status: "active", startedAt: Date.now() } : prev,
       );
 
     const onMeetingTranscript = (payload: {
       role: string;
       content: string;
       speaker?: string;
+      timestamp?: string;
     }) =>
       setActiveMeeting((prev) =>
         prev
@@ -89,7 +94,7 @@ export function useSocket() {
               ...prev,
               transcript: [
                 ...prev.transcript,
-                { role: payload.role, content: payload.content, speaker: payload.speaker },
+                { role: payload.role, content: payload.content, speaker: payload.speaker, timestamp: payload.timestamp ?? new Date().toISOString() },
               ],
             }
           : prev,

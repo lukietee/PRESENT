@@ -4,6 +4,7 @@ import type { Server as HttpServer } from "node:http";
 import type { Server as SocketIOServer } from "socket.io";
 import twilio from "twilio";
 import { config } from "../config.js";
+import { createDeepgramStream, sendAudio, closeDeepgramStream } from "./deepgram-stt.js";
 
 // ── TwiML webhook route ─────────────────────────────────────────────
 
@@ -69,16 +70,18 @@ export function attachMediaStream(httpServer: HttpServer, io: SocketIOServer) {
             `[twilio] Stream started — callSid=${callSid} streamSid=${streamSid}`
           );
           io.emit("call:start", { id: callSid, callerNumber: "unknown" });
+          createDeepgramStream(callSid, io);
           break;
 
         case "media": {
           const audioBuffer = Buffer.from(msg.media!.payload, "base64");
-          // TODO: pipe audioBuffer to Deepgram STT (hour 1.5)
+          sendAudio(callSid, audioBuffer);
           break;
         }
 
         case "stop":
           console.log(`[twilio] Stream stopped — callSid=${callSid}`);
+          closeDeepgramStream(callSid);
           io.emit("call:end", { id: callSid });
           break;
       }
@@ -87,6 +90,7 @@ export function attachMediaStream(httpServer: HttpServer, io: SocketIOServer) {
     ws.on("close", () => {
       console.log(`[twilio] WebSocket closed — callSid=${callSid}`);
       if (callSid) {
+        closeDeepgramStream(callSid);
         io.emit("call:end", { id: callSid });
       }
     });

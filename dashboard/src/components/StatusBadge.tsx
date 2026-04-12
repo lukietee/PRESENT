@@ -12,10 +12,10 @@ export function StatusBadge(props: StatusBadgeProps) {
 
   if (status === "active") {
     return (
-      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-400">
+      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-status-live">
         <span className="relative flex h-2 w-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-live opacity-75 motion-reduce:animate-none" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-status-live" />
         </span>
         Live
       </span>
@@ -24,16 +24,15 @@ export function StatusBadge(props: StatusBadgeProps) {
 
   if (status === "joining") {
     return (
-      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
-        <span className="h-2.5 w-2.5 animate-spin rounded-full border border-amber-400 border-t-transparent" />
+      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-status-joining">
+        <span className="h-2.5 w-2.5 animate-spin rounded-full border border-status-joining border-t-transparent motion-reduce:animate-none" />
         Joining
       </span>
     );
   }
 
-  // ended
   return (
-    <span className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-800/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+    <span className="inline-flex items-center rounded-full border border-badge-ended-border bg-badge-ended-bg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-badge-ended-text">
       Ended
     </span>
   );

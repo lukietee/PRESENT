@@ -21,6 +21,7 @@ export type LiveTranscriptProps = {
 
 export function LiveTranscript({
   messages,
+  className,
   emptyLabel = "No messages yet.",
 }: LiveTranscriptProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -34,13 +35,18 @@ export function LiveTranscript({
   return (
     <div
       ref={scrollRef}
-      className="min-h-[5rem] max-h-[70vh] overflow-y-auto space-y-2 px-1 py-1"
+      className={[
+        "min-h-[5rem] max-h-[70vh] overflow-y-auto space-y-2 px-1 py-1",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
       role="log"
       aria-live="polite"
       aria-relevant="additions"
     >
       {messages.length === 0 ? (
-        <p className="text-sm text-zinc-500 px-2">{emptyLabel}</p>
+        <p className="px-2 text-sm text-muted-foreground">{emptyLabel}</p>
       ) : (
         messages.map((line, i) => {
           const isAgent = line.role.toLowerCase() === "agent";
@@ -49,14 +55,16 @@ export function LiveTranscript({
               key={i}
               className={`flex flex-col gap-0.5 ${isAgent ? "items-end" : "items-start"}`}
             >
-              <span className={`text-[10px] font-medium px-1 ${isAgent ? "text-emerald-500" : "text-zinc-500"}`}>
+              <span
+                className={`px-1 text-[10px] font-medium ${isAgent ? "text-bubble-label-agent" : "text-bubble-label-caller"}`}
+              >
                 {lineLabel(line)}
               </span>
               <div
-                className={`max-w-[85%] rounded-xl px-3 py-1.5 text-sm leading-relaxed ${
+                className={`max-w-[min(85%,20rem)] rounded-xl px-3 py-1.5 text-sm leading-relaxed sm:max-w-[85%] ${
                   isAgent
-                    ? "bg-emerald-950/60 text-emerald-100 rounded-tr-sm"
-                    : "bg-zinc-700/50 text-zinc-200 rounded-tl-sm"
+                    ? "rounded-tr-sm bg-bubble-agent-bg text-bubble-agent-text"
+                    : "rounded-tl-sm bg-bubble-caller-bg text-bubble-caller-text"
                 }`}
               >
                 {line.content}

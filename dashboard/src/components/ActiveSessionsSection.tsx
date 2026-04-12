@@ -18,7 +18,7 @@ export function ActiveSessionsSection() {
     activeCall === null ? "md:col-span-2" : undefined;
 
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2">
       {activeCall !== null && (
         <SessionCard
           variant="phone"

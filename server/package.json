@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "build": "tsc"
+    "build": "tsc",
+    "tunnel:server": "ngrok http ${PORT:-3001}",
+    "tunnel:sync-env": "node ../scripts/sync-ngrok-env.cjs"
   },
   "dependencies": {
     "@deepgram/sdk": "^5.0.0",

@@ -13,4 +13,7 @@ export const config = {
     authToken: process.env.TWILIO_AUTH_TOKEN || "",
     phoneNumber: process.env.TWILIO_PHONE_NUMBER || "",
   },
+  deepgram: {
+    apiKey: process.env.DEEPGRAM_API_KEY || "",
+  },
 } as const;

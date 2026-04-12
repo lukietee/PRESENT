@@ -5,6 +5,8 @@ import { Server } from "socket.io";
 import { config } from "./config.js";
 import { twilioRouter, attachMediaStream } from "./phone/twilio.js";
 import { browserAgent } from "./browser-agent/agent.js";
+import { registerMeetingSocketHandlers } from "./meeting/socket-handlers.js";
+import { installMeetingRuntime, shutdownMeetingRuntime } from "./meeting/meeting-runtime.js";
 
 const dashboardOrigins = [
   "http://localhost:3000",
@@ -42,6 +44,9 @@ app.use(twilioRouter);
 // Twilio media stream WebSocket
 attachMediaStream(httpServer, io);
 
+registerMeetingSocketHandlers(io);
+installMeetingRuntime();
+
 httpServer.listen(config.port, () => {
   console.log(`Server listening on http://localhost:${config.port}`);
   if (!config.serverUrl) {
@@ -57,6 +62,7 @@ browserAgent.init().catch((err) => {
 });
 
 process.on("SIGINT", async () => {
+  await shutdownMeetingRuntime();
   await browserAgent.shutdown();
   process.exit(0);
 });

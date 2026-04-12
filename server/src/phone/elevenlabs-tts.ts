@@ -33,3 +33,36 @@ export async function synthesize(text: string): Promise<Buffer> {
   console.log(`[elevenlabs] Synthesized ${text.length} chars → ${arrayBuf.byteLength} bytes audio`);
   return Buffer.from(arrayBuf);
 }
+
+/**
+ * Synthesize text to raw PCM s16le mono 24kHz for meeting / HeyGen paths.
+ */
+export async function synthesizeMeetingPcm24k(text: string): Promise<Buffer> {
+  const { apiKey, voiceId } = config.elevenlabs;
+  const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=pcm_24000`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "xi-api-key": apiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      text,
+      model_id: "eleven_turbo_v2_5",
+      voice_settings: {
+        stability: 0.5,
+        similarity_boost: 0.75,
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`[elevenlabs] TTS failed (${res.status}): ${errText}`);
+  }
+
+  const arrayBuf = await res.arrayBuffer();
+  console.log(`[elevenlabs] Meeting PCM24k ${text.length} chars → ${arrayBuf.byteLength} bytes`);
+  return Buffer.from(arrayBuf);
+}

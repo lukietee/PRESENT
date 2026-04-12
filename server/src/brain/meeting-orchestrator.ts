@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Server as SocketIOServer } from "socket.io";
 import { config } from "../config.js";
 import {
@@ -9,6 +10,8 @@ import type { Message } from "./gemini.js";
 import { synthesizeMeetingPcm24k } from "../phone/elevenlabs-tts.js";
 import { appendMeetingTranscript } from "../meeting/socket-handlers.js";
 import { runStreamingGeminiReply } from "./streaming-transcript-handler.js";
+import { browserAgent } from "../browser-agent/agent.js";
+import { formatToolCall } from "./format-tool-call.js";
 
 export type MeetingAudioSinks = {
   toMeetMic: (pcm48kInt16LE: Buffer) => Promise<void>;
@@ -114,6 +117,54 @@ export async function handleMeetingTranscript(
     speakSentence: async (text) => {
       if (stale()) return;
       await speakMeetingSentence(text, io, sinks);
+    },
+    toolExecutor: async (name, args) => {
+      const toolId = randomUUID();
+      const friendlyLabel = formatToolCall(name, JSON.stringify(args));
+
+      io.emit("tool:pending", { id: toolId, toolName: name, toolArgs: args, label: friendlyLabel });
+
+      const approved = await new Promise<boolean>((resolve) => {
+        const timeout = setTimeout(() => {
+          cleanup();
+          resolve(true);
+        }, 30000);
+
+        function onApprove(payload: { id: string }) {
+          if (payload.id !== toolId) return;
+          cleanup();
+          resolve(true);
+        }
+
+        function onDeny(payload: { id: string }) {
+          if (payload.id !== toolId) return;
+          cleanup();
+          resolve(false);
+        }
+
+        function cleanup() {
+          clearTimeout(timeout);
+          for (const [, socket] of io.sockets.sockets) {
+            socket.off("tool:approve", onApprove);
+            socket.off("tool:deny", onDeny);
+          }
+        }
+
+        for (const [, socket] of io.sockets.sockets) {
+          socket.on("tool:approve", onApprove);
+          socket.on("tool:deny", onDeny);
+        }
+      });
+
+      appendMeetingTranscript(io, { role: "tool", content: friendlyLabel });
+
+      if (approved) {
+        io.emit("tool:resolved", { id: toolId, status: "approved" });
+        return browserAgent.execute(name, args);
+      } else {
+        io.emit("tool:resolved", { id: toolId, status: "denied" });
+        return "Tool call denied by user.";
+      }
     },
   });
 }

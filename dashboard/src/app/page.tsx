@@ -3,6 +3,7 @@ import { ConnectionStatus } from "@/components/ConnectionStatus";
 import { ActiveSessionsSection } from "@/components/ActiveSessionsSection";
 import { PastSessionsWrapper } from "@/components/PastSessionsWrapper";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { VoiceCloneButton } from "@/components/VoiceCloneButton";
 
 export default function Home() {
   return (
@@ -21,6 +22,7 @@ export default function Home() {
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <VoiceCloneButton />
             <ThemeToggle />
             <ConnectionStatus />
           </div>

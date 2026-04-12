@@ -1,0 +1,13 @@
+{
+  "name": "present",
+  "private": true,
+  "workspaces": ["server", "dashboard"],
+  "scripts": {
+    "dev": "concurrently -n server,dash -c blue,green \"npm run dev -w server\" \"npm run dev -w dashboard\"",
+    "dev:server": "npm run dev -w server",
+    "dev:dashboard": "npm run dev -w dashboard"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

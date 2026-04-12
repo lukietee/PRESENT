@@ -18,6 +18,10 @@ export const metadata: Metadata = {
   description: "Present! dashboard",
 };
 
+export const viewport = {
+  viewportFit: "cover" as const,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{

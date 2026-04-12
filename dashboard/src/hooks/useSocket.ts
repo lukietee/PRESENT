@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { io, type Socket } from "socket.io-client";
+import { io } from "socket.io-client";
 
 const url =
   process.env.NEXT_PUBLIC_SOCKET_URL?.replace(/\/$/, "") ||
@@ -13,29 +13,28 @@ export type Hour0TestPayload = {
 };
 
 export function useSocket() {
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [socket] = useState(
+    () => io(url, { transports: ["websocket", "polling"] }),
+  );
   const [connected, setConnected] = useState(false);
   const [hour0Test, setHour0Test] = useState<Hour0TestPayload | null>(null);
 
   useEffect(() => {
-    const s = io(url, { transports: ["websocket", "polling"] });
-    setSocket(s);
-
     const onConnect = () => setConnected(true);
     const onDisconnect = () => setConnected(false);
     const onHour0 = (payload: Hour0TestPayload) => setHour0Test(payload);
 
-    s.on("connect", onConnect);
-    s.on("disconnect", onDisconnect);
-    s.on("hour0:test", onHour0);
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("hour0:test", onHour0);
 
     return () => {
-      s.off("connect", onConnect);
-      s.off("disconnect", onDisconnect);
-      s.off("hour0:test", onHour0);
-      s.disconnect();
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("hour0:test", onHour0);
+      socket.disconnect();
     };
-  }, []);
+  }, [socket]);
 
   return { socket, connected, hour0Test };
 }

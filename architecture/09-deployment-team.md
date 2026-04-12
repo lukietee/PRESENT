@@ -12,6 +12,7 @@ Your laptop:
 ```
 
 If you need to deploy for judging:
+
 - Dashboard → Vercel (free, instant)
 - Server → Railway (free tier, supports WebSockets)
 
@@ -22,6 +23,7 @@ If you need to deploy for judging:
 Both people sit together for 30 minutes before splitting off.
 
 **Do this together:**
+
 1. Create the monorepo with `server/` and `dashboard/` folders
 2. Initialize both projects (Express + Next.js)
 3. Set up shared `.env` with all API keys

@@ -67,6 +67,36 @@ export function useSocket() {
           : prev,
       );
 
+    const onToolPending = (payload: { id: string; toolName: string; label: string }) => {
+      const line: TranscriptLine = {
+        role: "tool-pending",
+        content: payload.label,
+        toolId: payload.id,
+        toolStatus: "pending",
+        timestamp: new Date().toISOString(),
+      };
+      // Add to whichever session is active
+      setActiveCall((prev) =>
+        prev ? { ...prev, transcript: [...prev.transcript, line] } : prev,
+      );
+      setActiveMeeting((prev) =>
+        prev ? { ...prev, transcript: [...prev.transcript, line] } : prev,
+      );
+    };
+
+    const onToolResolved = (payload: { id: string; status: "approved" | "denied" }) => {
+      const updateTranscript = (transcript: TranscriptLine[]) =>
+        transcript.map((t) =>
+          t.toolId === payload.id ? { ...t, toolStatus: payload.status as "approved" | "denied" } : t,
+        );
+      setActiveCall((prev) =>
+        prev ? { ...prev, transcript: updateTranscript(prev.transcript) } : prev,
+      );
+      setActiveMeeting((prev) =>
+        prev ? { ...prev, transcript: updateTranscript(prev.transcript) } : prev,
+      );
+    };
+
     const onCallEnd = (_payload: { id: string }) =>
       setActiveCall((prev) => {
         if (prev) {
@@ -141,6 +171,8 @@ export function useSocket() {
     socket.on("meeting:active", onMeetingActive);
     socket.on("meeting:transcript", onMeetingTranscript);
     socket.on("meeting:ended", onMeetingEnded);
+    socket.on("tool:pending", onToolPending);
+    socket.on("tool:resolved", onToolResolved);
 
     return () => {
       socket.off("connect", onConnect);
@@ -153,6 +185,8 @@ export function useSocket() {
       socket.off("meeting:active", onMeetingActive);
       socket.off("meeting:transcript", onMeetingTranscript);
       socket.off("meeting:ended", onMeetingEnded);
+      socket.off("tool:pending", onToolPending);
+      socket.off("tool:resolved", onToolResolved);
       socket.disconnect();
     };
   }, [socket]);
@@ -176,6 +210,20 @@ export function useSocket() {
     setLastEndedSession(null);
   }, []);
 
+  const approveTool = useCallback(
+    (id: string) => {
+      socket.emit("tool:approve", { id });
+    },
+    [socket],
+  );
+
+  const denyTool = useCallback(
+    (id: string) => {
+      socket.emit("tool:deny", { id });
+    },
+    [socket],
+  );
+
   return {
     socket,
     connected,
@@ -187,5 +235,7 @@ export function useSocket() {
     joinMeeting,
     leaveMeeting,
     clearLastEndedSession,
+    approveTool,
+    denyTool,
   };
 }

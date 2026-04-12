@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { TranscriptLine } from "@/types/session";
+import { ToolApproval } from "@/components/ToolApproval";
 
 export function lineLabel(line: TranscriptLine): string {
   if (line.speaker?.trim()) {
@@ -23,12 +24,16 @@ export type LiveTranscriptProps = {
   messages: TranscriptLine[];
   className?: string;
   emptyLabel?: string;
+  onApproveTool?: (id: string) => void;
+  onDenyTool?: (id: string) => void;
 };
 
 export function LiveTranscript({
   messages,
   className,
   emptyLabel = "No messages yet.",
+  onApproveTool,
+  onDenyTool,
 }: LiveTranscriptProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -57,6 +62,21 @@ export function LiveTranscript({
         messages.map((line, i) => {
           const isAgent = line.role.toLowerCase() === "agent";
           const isTool = line.role.toLowerCase() === "tool";
+          const isToolPending = line.role === "tool-pending";
+
+          if (isToolPending && line.toolId && line.toolStatus) {
+            return (
+              <ToolApproval
+                key={`tool-${line.toolId}`}
+                toolId={line.toolId}
+                content={line.content}
+                status={line.toolStatus}
+                timestamp={line.timestamp}
+                onApprove={onApproveTool ?? (() => {})}
+                onDeny={onDenyTool ?? (() => {})}
+              />
+            );
+          }
 
           if (isTool) {
             return (

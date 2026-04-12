@@ -28,6 +28,8 @@ export function ActiveSessionsSection() {
     leaveMeeting,
     joinMeeting,
     connected,
+    approveTool,
+    denyTool,
   } = useSocket();
 
   const { toasts, show } = useToast();
@@ -66,6 +68,8 @@ export function ActiveSessionsSection() {
               startedAt={activeCall.startedAt}
               actionLabel="End Call"
               onAction={() => setConfirmAction("endCall")}
+              onApproveTool={approveTool}
+              onDenyTool={denyTool}
             />
           )
         )}
@@ -79,6 +83,8 @@ export function ActiveSessionsSection() {
               startedAt={activeMeeting.startedAt}
               actionLabel="Leave Meeting"
               onAction={() => setConfirmAction("leaveMeeting")}
+              onApproveTool={approveTool}
+              onDenyTool={denyTool}
             />
           ) : (
             <JoinMeetingPanel

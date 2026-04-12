@@ -19,6 +19,8 @@ type SessionCardBase = {
   secondaryLabel?: string;
   onSecondaryAction?: () => void;
   startedAt?: number | null;
+  onApproveTool?: (id: string) => void;
+  onDenyTool?: (id: string) => void;
   className?: string;
 };
 
@@ -46,6 +48,8 @@ export function SessionCard(props: SessionCardProps) {
     secondaryLabel,
     onSecondaryAction,
     startedAt,
+    onApproveTool,
+    onDenyTool,
     className,
   } = props;
 
@@ -127,7 +131,7 @@ export function SessionCard(props: SessionCardProps) {
             </button>
           )}
         </div>
-        <LiveTranscript messages={messages} />
+        <LiveTranscript messages={messages} onApproveTool={onApproveTool} onDenyTool={onDenyTool} />
       </div>
 
       <div className="flex items-center gap-2 border-t border-header-border px-4 py-3">

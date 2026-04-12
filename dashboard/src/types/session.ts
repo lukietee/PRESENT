@@ -9,6 +9,10 @@ export type TranscriptLine = {
   speaker?: string;
   /** Optional for UI; server state uses Date when persisted in memory */
   timestamp?: string;
+  /** Unique ID for tool approval flow */
+  toolId?: string;
+  /** Status of a tool call approval */
+  toolStatus?: "pending" | "approved" | "denied";
 };
 
 export type PhoneSessionStatus = "active" | "ended";

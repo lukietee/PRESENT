@@ -12,6 +12,8 @@ export function extractSentences(buffer: string): { sentences: string[]; remaind
   return { sentences: parts, remainder };
 }
 
+export type ToolExecutorFn = (name: string, args: Record<string, string>) => Promise<string>;
+
 export type RunStreamingGeminiReplyOpts = {
   systemPrompt: string;
   /** Return true to stop speaking and exit (e.g. barge-in / new utterance). */
@@ -19,6 +21,8 @@ export type RunStreamingGeminiReplyOpts = {
   speakSentence: (text: string) => Promise<void>;
   /** Optional: called when a tool is invoked (for UI display) */
   onToolCall?: (toolName: string, toolArgs: string) => void;
+  /** Optional: custom tool executor (e.g. with approval gate). Defaults to browserAgent.execute. */
+  toolExecutor?: ToolExecutorFn;
   errorFallback: string;
   logLabel: string;
 };
@@ -35,13 +39,14 @@ export async function runStreamingGeminiReply(
   let allText = "";
   let fillerPlayed = false;
 
-  const { shouldAbort, speakSentence, onToolCall, systemPrompt, errorFallback, logLabel } = opts;
+  const { shouldAbort, speakSentence, onToolCall, toolExecutor, systemPrompt, errorFallback, logLabel } = opts;
+  const executor = toolExecutor ?? browserAgent.execute.bind(browserAgent);
 
   try {
     for await (const chunk of generateResponse(
       history,
       systemPrompt,
-      browserAgent.execute.bind(browserAgent)
+      executor
     )) {
       if (shouldAbort()) {
         return;

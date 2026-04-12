@@ -17,6 +17,8 @@ export type RunStreamingGeminiReplyOpts = {
   /** Return true to stop speaking and exit (e.g. barge-in / new utterance). */
   shouldAbort: () => boolean;
   speakSentence: (text: string) => Promise<void>;
+  /** Optional: called when a tool is invoked (for UI display) */
+  onToolCall?: (toolName: string, toolArgs: string) => void;
   errorFallback: string;
   logLabel: string;
 };
@@ -31,8 +33,9 @@ export async function runStreamingGeminiReply(
 ): Promise<void> {
   let sentenceBuffer = "";
   let allText = "";
+  let fillerPlayed = false;
 
-  const { shouldAbort, speakSentence, systemPrompt, errorFallback, logLabel } = opts;
+  const { shouldAbort, speakSentence, onToolCall, systemPrompt, errorFallback, logLabel } = opts;
 
   try {
     for await (const chunk of generateResponse(
@@ -44,13 +47,27 @@ export async function runStreamingGeminiReply(
         return;
       }
 
-      if (chunk === "__TOOL_CALL__") {
+      if (chunk.startsWith("__TOOL_CALL__")) {
+        // Parse tool info: __TOOL_CALL__:toolName:{"arg":"val"}
+        const colonIdx = chunk.indexOf(":", 14);
+        if (colonIdx > 0) {
+          const toolName = chunk.slice(14, colonIdx);
+          const toolArgs = chunk.slice(colonIdx + 1);
+          onToolCall?.(toolName, toolArgs);
+        }
+
         if (sentenceBuffer.trim()) {
           await speakSentence(sentenceBuffer.trim());
           sentenceBuffer = "";
           if (shouldAbort()) {
             return;
           }
+        }
+
+        // Play filler on first tool round only
+        if (!fillerPlayed) {
+          fillerPlayed = true;
+          await speakSentence("Yeah, give me one sec.");
         }
         continue;
       }

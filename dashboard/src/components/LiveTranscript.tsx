@@ -50,6 +50,18 @@ export function LiveTranscript({
       ) : (
         messages.map((line, i) => {
           const isAgent = line.role.toLowerCase() === "agent";
+          const isTool = line.role.toLowerCase() === "tool";
+
+          if (isTool) {
+            return (
+              <div key={i} className="flex justify-center">
+                <div className="rounded-lg px-3 py-1 text-xs font-mono bg-amber-950/40 text-amber-300 border border-amber-800/30">
+                  {line.content}
+                </div>
+              </div>
+            );
+          }
+
           return (
             <div
               key={i}

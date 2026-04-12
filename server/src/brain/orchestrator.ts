@@ -49,6 +49,12 @@ export async function handleTranscript(
       logLabel: "orchestrator",
       errorFallback: "Hey, can I call you back in like 5 minutes?",
       speakSentence: (text) => speakAndEmit(text, callSid, io),
+      onToolCall: (toolName, toolArgs) => {
+        io.emit("call:transcript", {
+          role: "tool",
+          content: `🔧 ${toolName}(${toolArgs})`,
+        });
+      },
     });
   } finally {
     activeCalls.delete(callSid);

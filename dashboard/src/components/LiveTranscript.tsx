@@ -34,7 +34,7 @@ export function LiveTranscript({
   return (
     <div
       ref={scrollRef}
-      className="min-h-[5rem] max-h-52 overflow-y-auto space-y-2 px-1 py-1"
+      className="min-h-[5rem] max-h-[70vh] overflow-y-auto space-y-2 px-1 py-1"
       role="log"
       aria-live="polite"
       aria-relevant="additions"

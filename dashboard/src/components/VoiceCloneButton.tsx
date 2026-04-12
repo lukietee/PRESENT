@@ -12,10 +12,10 @@ export function VoiceCloneButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:text-foreground"
-        title="Clone your voice"
+        className="flex h-8 items-center gap-1.5 rounded-lg border border-border px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
-        <Mic size={14} />
+        <Mic size={13} />
+        Clone Voice
       </button>
       <VoiceCloneModal open={open} onClose={() => setOpen(false)} />
     </>

@@ -63,7 +63,7 @@ export function ActiveSessionsSection() {
               status={activeCall.status}
               subtitle={formatPhone(activeCall.callerNumber)}
               messages={activeCall.transcript}
-              startedAt={activeCall.status === "ended" ? null : activeCall.startedAt}
+              startedAt={activeCall.startedAt}
               actionLabel="End Call"
               onAction={() => setConfirmAction("endCall")}
             />
@@ -76,7 +76,7 @@ export function ActiveSessionsSection() {
               status={activeMeeting.status}
               subtitle={activeMeeting.meetingUrl}
               messages={activeMeeting.transcript}
-              startedAt={activeMeeting.status === "ended" ? null : activeMeeting.startedAt}
+              startedAt={activeMeeting.startedAt}
               actionLabel="Leave Meeting"
               onAction={() => setConfirmAction("leaveMeeting")}
             />

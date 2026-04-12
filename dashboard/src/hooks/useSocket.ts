@@ -7,6 +7,7 @@ import type {
   PhoneSessionStatus,
   MeetingSessionStatus,
 } from "@/types/session";
+import type { PastSession } from "@/hooks/usePastSessions";
 
 const url =
   process.env.NEXT_PUBLIC_SOCKET_URL?.replace(/\/$/, "") ||
@@ -43,6 +44,7 @@ export function useSocket() {
   const [activeMeeting, setActiveMeeting] = useState<ActiveMeeting | null>(
     null,
   );
+  const [lastEndedSession, setLastEndedSession] = useState<PastSession | null>(null);
 
   useEffect(() => {
     const onConnect = () => setConnected(true);
@@ -66,7 +68,19 @@ export function useSocket() {
       );
 
     const onCallEnd = (_payload: { id: string }) =>
-      setActiveCall((prev) => (prev ? { ...prev, status: "ended" } : prev));
+      setActiveCall((prev) => {
+        if (prev) {
+          setLastEndedSession({
+            id: prev.id,
+            type: "phone",
+            caller_number: prev.callerNumber,
+            transcript: prev.transcript,
+            started_at: new Date(prev.startedAt).toISOString(),
+            ended_at: new Date().toISOString(),
+          });
+        }
+        return null;
+      });
 
     const onMeetingJoining = (payload: { id: string; meetingUrl: string }) =>
       setActiveMeeting({
@@ -101,7 +115,21 @@ export function useSocket() {
       );
 
     const onMeetingEnded = (_payload: { id: string }) =>
-      setActiveMeeting(null);
+      setActiveMeeting((prev) => {
+        if (prev) {
+          setLastEndedSession({
+            id: prev.id,
+            type: "meeting",
+            meeting_url: prev.meetingUrl,
+            transcript: prev.transcript,
+            started_at: prev.startedAt
+              ? new Date(prev.startedAt).toISOString()
+              : new Date().toISOString(),
+            ended_at: new Date().toISOString(),
+          });
+        }
+        return null;
+      });
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
@@ -144,14 +172,20 @@ export function useSocket() {
     socket.emit("meeting:leave", {});
   }, [socket]);
 
+  const clearLastEndedSession = useCallback(() => {
+    setLastEndedSession(null);
+  }, []);
+
   return {
     socket,
     connected,
     hour0Test,
     activeCall,
     activeMeeting,
+    lastEndedSession,
     endCall,
     joinMeeting,
     leaveMeeting,
+    clearLastEndedSession,
   };
 }

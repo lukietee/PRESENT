@@ -38,5 +38,12 @@ export function usePastSessions() {
     refresh();
   }, [refresh]);
 
-  return { sessions, loading, refresh };
+  const prepend = useCallback((session: PastSession) => {
+    setSessions((prev) => {
+      if (prev.some((s) => s.id === session.id)) return prev;
+      return [session, ...prev];
+    });
+  }, []);
+
+  return { sessions, loading, refresh, prepend };
 }

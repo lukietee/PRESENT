@@ -50,26 +50,25 @@ export function SessionCard(props: SessionCardProps) {
   const label = isPhone ? "Phone" : "Meeting";
 
   const headerGradient = isPhone
-    ? "from-emerald-950/70 to-zinc-800"
-    : "from-violet-950/70 to-zinc-800";
+    ? "from-[var(--phone-gradient-from)] to-[var(--phone-gradient-to)]"
+    : "from-[var(--meeting-gradient-from)] to-[var(--meeting-gradient-to)]";
 
-  const iconColor = isPhone ? "text-emerald-400" : "text-violet-400";
+  const iconColor = isPhone ? "text-accent-phone" : "text-accent-meeting";
 
   return (
     <section
       className={[
-        "w-full overflow-hidden rounded-2xl border border-zinc-700/50 bg-zinc-800 shadow-xl",
+        "card-interactive card-interactive-hover w-full overflow-hidden rounded-2xl border border-border bg-card shadow-card",
         className ?? "",
       ]
         .filter(Boolean)
         .join(" ")}
     >
-      {/* Header strip */}
       <div className={`bg-gradient-to-r ${headerGradient} px-5 py-4`}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Icon size={15} className={iconColor} strokeWidth={2} />
-            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {label}
             </span>
           </div>
@@ -81,7 +80,7 @@ export function SessionCard(props: SessionCardProps) {
         </div>
         {subtitle && (
           <p
-            className="mt-1.5 truncate font-mono text-xs text-zinc-500"
+            className="mt-1.5 truncate font-mono text-xs text-subtle"
             title={subtitle}
           >
             {subtitle}
@@ -89,21 +88,19 @@ export function SessionCard(props: SessionCardProps) {
         )}
       </div>
 
-      {/* Transcript */}
-      <div className="border-t border-zinc-700/60 px-4 py-3">
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
+      <div className="border-t border-header-border px-4 py-3">
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-subtle">
           Live Transcript
         </p>
         <LiveTranscript messages={messages} />
       </div>
 
-      {/* Footer */}
-      <div className="flex items-center gap-2 border-t border-zinc-700/60 px-4 py-3">
+      <div className="flex items-center gap-2 border-t border-header-border px-4 py-3">
         <button
           type="button"
           onClick={onAction}
           disabled={actionDisabled}
-          className="flex-1 rounded-lg border border-rose-900/60 bg-rose-950/30 px-4 py-2 text-xs font-semibold text-rose-400 transition-colors hover:border-rose-700/60 hover:bg-rose-950/50 hover:text-rose-300 disabled:pointer-events-none disabled:opacity-40"
+          className="flex min-h-11 flex-1 items-center justify-center rounded-lg border border-danger-border bg-danger-muted px-4 py-2.5 text-xs font-semibold text-danger transition-colors hover:border-danger-hover-border hover:bg-danger-hover-bg hover:text-danger disabled:pointer-events-none disabled:opacity-40"
         >
           {actionLabel}
         </button>
@@ -111,7 +108,7 @@ export function SessionCard(props: SessionCardProps) {
           <button
             type="button"
             onClick={onSecondaryAction}
-            className="rounded-lg border border-zinc-700/60 bg-zinc-800/40 px-3 py-2 text-xs font-medium text-zinc-400 transition-colors hover:border-zinc-600 hover:bg-zinc-800/70 hover:text-zinc-300"
+            className="min-h-11 rounded-lg border border-secondary-btn-border bg-secondary-btn-bg px-3 py-2.5 text-xs font-medium text-muted-foreground transition-colors hover:border-secondary-btn-hover-border hover:bg-secondary-btn-hover-bg hover:text-foreground"
           >
             {secondaryLabel}
           </button>

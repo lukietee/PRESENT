@@ -1,15 +1,227 @@
 @import "tailwindcss";
 
+/*
+ * Token manifest — use these Tailwind utilities (Phase 2+ refactors):
+ * Page: bg-background, text-foreground
+ * Surfaces: bg-card, border-border, border-header-border, shadow-card
+ * Text: text-muted-foreground, text-subtle, text-label (via text-[10px] pattern + muted-foreground)
+ * Phone accent: text-accent-phone, ring-accent-phone, from-[var(--phone-gradient-from)] to-[var(--phone-gradient-to)]
+ * Meeting accent: text-accent-meeting, from-[var(--meeting-gradient-from)] to-[var(--meeting-gradient-to)]
+ * Danger: bg-danger-muted, border-danger-border, text-danger (+ hover:border-rose-700/60 style via danger tokens)
+ * Transcript: bg-bubble-caller-bg, text-bubble-caller-text, bg-bubble-agent-bg, text-bubble-agent-text,
+ *   text-bubble-label-caller, text-bubble-label-agent
+ * Input: bg-input-bg, border-input-border, text-foreground, placeholder:text-placeholder, focus:ring-accent-meeting
+ * Status: text-status-live, text-status-joining, bg-badge-ended-*, border-badge-ended-border, text-badge-ended-text
+ * Header chip "Live": bg-pill-live-bg, text-pill-live-text, border-pill-live-border
+ * Meeting ready pill: bg-meeting-pill-bg, text-meeting-pill-text, border-meeting-pill-border
+ * Connection pill: bg-pill-bg, border-pill-border
+ * Motion: animate-enter (main), card-interactive (hover shadow/border), motion-reduce disables enter + shortens transitions
+ */
+
 :root {
+  --background: #fafafa;
+  --foreground: #18181b;
+  --card: #ffffff;
+  --border: rgb(228 228 231 / 0.85);
+  --header-border: rgb(228 228 231 / 0.95);
+  --muted-foreground: #71717a;
+  --subtle: #a1a1aa;
+  --accent-phone: #059669;
+  --accent-meeting: #7c3aed;
+  --phone-gradient-from: rgb(16 185 129 / 0.22);
+  --phone-gradient-to: #e4e4e7;
+  --meeting-gradient-from: rgb(124 58 237 / 0.18);
+  --meeting-gradient-to: #e4e4e7;
+  --danger: #e11d48;
+  --danger-muted: rgb(255 241 242 / 0.95);
+  --danger-border: rgb(251 113 133 / 0.55);
+  --danger-hover-border: rgb(225 29 72 / 0.55);
+  --danger-hover-bg: rgb(255 228 230 / 0.85);
+  --bubble-caller-bg: rgb(228 228 231 / 0.85);
+  --bubble-caller-text: #27272a;
+  --bubble-agent-bg: rgb(6 95 70 / 0.14);
+  --bubble-agent-text: #14532d;
+  --bubble-label-caller: #71717a;
+  --bubble-label-agent: #047857;
+  --input-bg: rgb(250 250 250 / 0.9);
+  --input-border: rgb(228 228 231 / 0.95);
+  --placeholder: #a1a1aa;
+  --status-live: #059669;
+  --status-joining: #d97706;
+  --badge-ended-bg: rgb(244 244 245 / 0.95);
+  --badge-ended-border: rgb(228 228 231);
+  --badge-ended-text: #71717a;
+  --pill-bg: rgb(255 255 255 / 0.85);
+  --pill-border: rgb(228 228 231);
+  --pill-live-bg: rgb(244 244 245);
+  --pill-live-text: #71717a;
+  --pill-live-border: rgb(228 228 231);
+  --meeting-pill-bg: rgb(245 243 255 / 0.9);
+  --meeting-pill-text: #6d28d9;
+  --meeting-pill-border: rgb(196 181 253 / 0.55);
+  --meeting-cta-bg: rgb(245 243 255 / 0.55);
+  --meeting-cta-border: rgb(196 181 253 / 0.65);
+  --meeting-cta-hover-border: rgb(167 139 250 / 0.75);
+  --meeting-cta-hover-bg: rgb(237 233 254 / 0.75);
+  --secondary-btn-border: rgb(228 228 231 / 0.95);
+  --secondary-btn-bg: rgb(250 250 250 / 0.5);
+  --secondary-btn-hover-border: rgb(212 212 216);
+  --secondary-btn-hover-bg: rgb(244 244 245 / 0.9);
+  --elevation-card: 0 25px 50px -12px rgb(0 0 0 / 0.08);
+  --elevation-card-hover: 0 28px 55px -12px rgb(0 0 0 / 0.12);
+  --header-bg: rgb(250 250 250 / 0.85);
+}
+
+.dark {
   --background: #18181b;
   --foreground: #f4f4f5;
+  --card: #27272a;
+  --border: rgb(63 63 70 / 0.5);
+  --header-border: rgb(63 63 70 / 0.6);
+  --muted-foreground: #71717a;
+  --subtle: #52525b;
+  --accent-phone: #34d399;
+  --accent-meeting: #a78bfa;
+  --phone-gradient-from: rgb(6 78 59 / 0.7);
+  --phone-gradient-to: #27272a;
+  --meeting-gradient-from: rgb(76 29 149 / 0.7);
+  --meeting-gradient-to: #27272a;
+  --danger: #fb7185;
+  --danger-muted: rgb(136 19 55 / 0.3);
+  --danger-border: rgb(136 19 55 / 0.6);
+  --danger-hover-border: rgb(190 18 60 / 0.6);
+  --danger-hover-bg: rgb(136 19 55 / 0.5);
+  --bubble-caller-bg: rgb(63 63 70 / 0.5);
+  --bubble-caller-text: #e4e4e7;
+  --bubble-agent-bg: rgb(6 78 59 / 0.6);
+  --bubble-agent-text: #d1fae5;
+  --bubble-label-caller: #71717a;
+  --bubble-label-agent: #34d399;
+  --input-bg: rgb(24 24 27 / 0.5);
+  --input-border: rgb(63 63 70 / 0.6);
+  --placeholder: #52525b;
+  --status-live: #34d399;
+  --status-joining: #fbbf24;
+  --badge-ended-bg: rgb(39 39 42 / 0.6);
+  --badge-ended-border: rgb(63 63 70);
+  --badge-ended-text: #71717a;
+  --pill-bg: rgb(24 24 27 / 0.7);
+  --pill-border: rgb(39 39 42);
+  --pill-live-bg: rgb(39 39 42);
+  --pill-live-text: #a1a1aa;
+  --pill-live-border: rgb(63 63 70);
+  --meeting-pill-bg: rgb(76 29 149 / 0.4);
+  --meeting-pill-text: #ddd6fe;
+  --meeting-pill-border: rgb(91 33 182 / 0.6);
+  --meeting-cta-bg: rgb(76 29 149 / 0.35);
+  --meeting-cta-border: rgb(91 33 182 / 0.6);
+  --meeting-cta-hover-border: rgb(124 58 237 / 0.6);
+  --meeting-cta-hover-bg: rgb(76 29 149 / 0.55);
+  --secondary-btn-border: rgb(63 63 70 / 0.6);
+  --secondary-btn-bg: rgb(39 39 42 / 0.4);
+  --secondary-btn-hover-border: rgb(82 82 91);
+  --secondary-btn-hover-bg: rgb(39 39 42 / 0.7);
+  --elevation-card: 0 25px 50px -12px rgb(0 0 0 / 0.35);
+  --elevation-card-hover: 0 28px 55px -12px rgb(0 0 0 / 0.45);
+  --header-bg: rgb(24 24 27 / 0.8);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-header-border: var(--header-border);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle: var(--subtle);
+  --color-accent-phone: var(--accent-phone);
+  --color-accent-meeting: var(--accent-meeting);
+  --color-danger: var(--danger);
+  --color-danger-muted: var(--danger-muted);
+  --color-danger-border: var(--danger-border);
+  --color-danger-hover-border: var(--danger-hover-border);
+  --color-danger-hover-bg: var(--danger-hover-bg);
+  --color-bubble-caller-bg: var(--bubble-caller-bg);
+  --color-bubble-caller-text: var(--bubble-caller-text);
+  --color-bubble-agent-bg: var(--bubble-agent-bg);
+  --color-bubble-agent-text: var(--bubble-agent-text);
+  --color-bubble-label-caller: var(--bubble-label-caller);
+  --color-bubble-label-agent: var(--bubble-label-agent);
+  --color-input-bg: var(--input-bg);
+  --color-input-border: var(--input-border);
+  --color-placeholder: var(--placeholder);
+  --color-status-live: var(--status-live);
+  --color-status-joining: var(--status-joining);
+  --color-badge-ended-bg: var(--badge-ended-bg);
+  --color-badge-ended-border: var(--badge-ended-border);
+  --color-badge-ended-text: var(--badge-ended-text);
+  --color-pill-bg: var(--pill-bg);
+  --color-pill-border: var(--pill-border);
+  --color-pill-live-bg: var(--pill-live-bg);
+  --color-pill-live-text: var(--pill-live-text);
+  --color-pill-live-border: var(--pill-live-border);
+  --color-meeting-pill-bg: var(--meeting-pill-bg);
+  --color-meeting-pill-text: var(--meeting-pill-text);
+  --color-meeting-pill-border: var(--meeting-pill-border);
+  --color-meeting-cta-bg: var(--meeting-cta-bg);
+  --color-meeting-cta-border: var(--meeting-cta-border);
+  --color-meeting-cta-hover-border: var(--meeting-cta-hover-border);
+  --color-meeting-cta-hover-bg: var(--meeting-cta-hover-bg);
+  --color-secondary-btn-border: var(--secondary-btn-border);
+  --color-secondary-btn-bg: var(--secondary-btn-bg);
+  --color-secondary-btn-hover-border: var(--secondary-btn-hover-border);
+  --color-secondary-btn-hover-bg: var(--secondary-btn-hover-bg);
+  --color-header-bg: var(--header-bg);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --shadow-card: var(--elevation-card);
+  --shadow-card-hover: var(--elevation-card-hover);
+}
+
+@keyframes enter-main {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-enter {
+  animation: enter-main 0.45s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-enter {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.card-interactive {
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-interactive {
+    transition-duration: 0.01ms;
+  }
+}
+
+.card-interactive-hover:hover {
+  box-shadow: var(--elevation-card-hover);
+  border-color: color-mix(in oklab, var(--border) 70%, var(--foreground));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-interactive-hover:hover {
+    box-shadow: var(--elevation-card);
+  }
 }
 
 body {

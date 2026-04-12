@@ -54,9 +54,10 @@ Step 4: WIRE UP STREAMS
   → Piped to Deepgram streaming STT
 
 Step 5: CONVERSATION LOOP
-  Participants speak → Deepgram transcript
-  → If transcript contains user's name → BrainOrchestrator responds
-  → Gemini → ElevenLabs TTS → sent to HeyGen (lip sync) + meeting mic
+  Participants speak → Deepgram final transcript
+  → Barge-in: stop injected Meet mic BufferSources + HeyGen interrupt + bump reply epoch (invalidates in-flight Gemini/TTS)
+  → Default: respond only if transcript mentions USER_NAME (word boundary). With MEETING_PHONE_PARITY=true: same policy as phone (respond to every final utterance; PHONE_SYSTEM_PROMPT).
+  → Shared brain: server/src/brain/streaming-transcript-handler.ts (runStreamingGeminiReply) → Gemini → ElevenLabs TTS → HeyGen (lip sync) + meeting mic
   → Avatar speaks with synced lip movement
 
 Step 6: LEAVE

@@ -21,7 +21,7 @@ function getDebounceMs(buffer: string): number {
 }
 
 export async function createDeepgramStream(callSid: string, io: SocketIOServer) {
-  const client = new DeepgramClient({ key: config.deepgram.apiKey });
+  const client = new DeepgramClient({ apiKey: config.deepgram.apiKey });
 
   const socket = await client.listen.v1.connect({
     encoding: "mulaw",
@@ -31,7 +31,7 @@ export async function createDeepgramStream(callSid: string, io: SocketIOServer) 
     punctuate: true,
     interim_results: true,
     utterance_end_ms: 1000,
-  });
+  } as unknown as Parameters<DeepgramClient["listen"]["v1"]["connect"]>[0]);
 
   const entry = { socket, ready: false };
   connections.set(callSid, entry);

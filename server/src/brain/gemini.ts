@@ -109,7 +109,7 @@ export async function* generateResponse(
         contents: currentHistory,
         config: {
           systemInstruction: systemPrompt,
-          tools: [{ functionDeclarations: toolDeclarations }],
+          tools: [{ functionDeclarations: toolDeclarations as any }],
           maxOutputTokens: 200,
         },
       });

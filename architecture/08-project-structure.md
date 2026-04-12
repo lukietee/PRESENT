@@ -10,9 +10,11 @@ phoneclone/
 │   │   ├── config.ts             # Env vars
 │   │   │
 │   │   ├── brain/
-│   │   │   ├── orchestrator.ts   # Shared conversation loop + shouldRespond
-│   │   │   ├── gemini.ts         # Gemini streaming + function calling
-│   │   │   └── system-prompt.ts  # Hardcoded phone + meeting prompts
+│   │   │   ├── orchestrator.ts              # Phone: Twilio TTS path → runStreamingGeminiReply
+│   │   │   ├── meeting-orchestrator.ts        # Meet: dual sink + reply epoch / phone parity
+│   │   │   ├── streaming-transcript-handler.ts # Shared Gemini stream → sentence TTS
+│   │   │   ├── gemini.ts                      # Gemini streaming + function calling
+│   │   │   └── system-prompt.ts               # Phone + meeting prompts
 │   │   │
 │   │   ├── phone/
 │   │   │   ├── twilio.ts         # Webhook + media stream handler

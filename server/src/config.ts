@@ -32,4 +32,27 @@ export const config = {
     apiKey: process.env.ELEVENLABS_API_KEY || "",
     voiceId: process.env.ELEVENLABS_VOICE_ID || "",
   },
+  heygen: {
+    apiKey: process.env.HEYGEN_API_KEY || "",
+    avatarId: process.env.HEYGEN_AVATAR_ID || "",
+  },
+  /** Google Meet blocks obvious automation — see meeting-joiner + .env.example */
+  meeting: {
+    /** Use installed Google Chrome instead of bundled Chromium (recommended for Meet). */
+    useChromeChannel:
+      process.env.MEET_USE_CHROME_CHANNEL === "1" ||
+      process.env.MEET_USE_CHROME_CHANNEL === "true",
+    phoneParity:
+      process.env.MEETING_PHONE_PARITY === "1" ||
+      (process.env.MEETING_PHONE_PARITY || "").trim().toLowerCase() === "true",
+    /** Optional full User-Agent string (recent desktop Chrome). */
+    userAgent: (process.env.MEET_USER_AGENT || "").trim(),
+    /**
+     * Playwright's fake media flags can trigger Meet's "can't join" for some accounts.
+     * Set MEET_USE_FAKE_MEDIA=0 to use real device prompts (headed only).
+     */
+    useFakeMediaStream:
+      process.env.MEET_USE_FAKE_MEDIA !== "0" &&
+      process.env.MEET_USE_FAKE_MEDIA !== "false",
+  },
 } as const;

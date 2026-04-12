@@ -28,4 +28,8 @@ export const config = {
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || "",
   },
+  elevenlabs: {
+    apiKey: process.env.ELEVENLABS_API_KEY || "",
+    voiceId: process.env.ELEVENLABS_VOICE_ID || "",
+  },
 } as const;

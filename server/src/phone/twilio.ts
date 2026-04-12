@@ -31,6 +31,10 @@ twilioRouter.post("/api/twilio/voice", (req, res) => {
   res.type("text/xml").send(twiml.toString());
 });
 
+// ── Twilio stream registry (so other modules can send audio back) ───
+
+export const twilioStreams = new Map<string, { ws: WebSocket; streamSid: string }>();
+
 // ── Media stream WebSocket ──────────────────────────────────────────
 
 interface TwilioMediaMessage {
@@ -79,6 +83,7 @@ export function attachMediaStream(httpServer: HttpServer, io: SocketIOServer) {
           console.log(
             `[twilio] Stream started — callSid=${callSid} streamSid=${streamSid}`
           );
+          twilioStreams.set(callSid, { ws, streamSid });
           io.emit("call:start", { id: callSid, callerNumber: "unknown" });
           createDeepgramStream(callSid, io);
           break;
@@ -91,6 +96,7 @@ export function attachMediaStream(httpServer: HttpServer, io: SocketIOServer) {
 
         case "stop":
           console.log(`[twilio] Stream stopped — callSid=${callSid}`);
+          twilioStreams.delete(callSid);
           closeDeepgramStream(callSid);
           endSession(callSid);
           io.emit("call:end", { id: callSid });
@@ -101,6 +107,7 @@ export function attachMediaStream(httpServer: HttpServer, io: SocketIOServer) {
     ws.on("close", () => {
       console.log(`[twilio] WebSocket closed — callSid=${callSid}`);
       if (callSid) {
+        twilioStreams.delete(callSid);
         closeDeepgramStream(callSid);
         endSession(callSid);
         io.emit("call:end", { id: callSid });

@@ -1,22 +1,21 @@
 "use client";
 
-import { Radio } from "lucide-react";
 import { useSocket } from "@/hooks/useSocket";
 import { SessionCard } from "@/components/SessionCard";
+import { JoinMeetingPanel } from "@/components/JoinMeetingPanel";
 
 export function ActiveSessionsSection() {
-  const { activeCall, activeMeeting, endCall, leaveMeeting } = useSocket();
+  const {
+    activeCall,
+    activeMeeting,
+    endCall,
+    leaveMeeting,
+    joinMeeting,
+    connected,
+  } = useSocket();
 
-  const hasActiveSessions = activeCall !== null || activeMeeting !== null;
-
-  if (!hasActiveSessions) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-zinc-700/40 bg-zinc-800/30 py-20 text-center">
-        <Radio size={20} className="text-zinc-600" strokeWidth={1.5} />
-        <p className="text-sm text-zinc-500">No active sessions</p>
-      </div>
-    );
-  }
+  const meetingColumnClass =
+    activeCall === null ? "md:col-span-2" : undefined;
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -30,16 +29,23 @@ export function ActiveSessionsSection() {
           onAction={endCall}
         />
       )}
-      {activeMeeting !== null && (
-        <SessionCard
-          variant="meeting"
-          status={activeMeeting.status}
-          subtitle={activeMeeting.meetingUrl}
-          messages={activeMeeting.transcript}
-          actionLabel="Leave Meeting"
-          onAction={leaveMeeting}
-        />
-      )}
+      <div className={meetingColumnClass}>
+        {activeMeeting !== null ? (
+          <SessionCard
+            variant="meeting"
+            status={activeMeeting.status}
+            subtitle={activeMeeting.meetingUrl}
+            messages={activeMeeting.transcript}
+            actionLabel="Leave Meeting"
+            onAction={leaveMeeting}
+          />
+        ) : (
+          <JoinMeetingPanel
+            onJoin={joinMeeting}
+            disabled={!connected}
+          />
+        )}
+      </div>
     </div>
   );
 }

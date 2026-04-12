@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Mic, Square, RotateCcw, Upload, FileAudio } from "lucide-react";
 
 const SAMPLE_TEXT =
-  "Hey, thanks for calling! I'm just looking over the project notes right now. The revenue charts are about eighty percent done, and we still need to wire up the export feature. Let me pull up the latest file and send it your way. Sound good?";
+  "Hey, thanks for calling! I'm just looking over the project notes right now. The revenue charts are about eighty percent done, and we still need to wire up the export feature. Let me pull up the latest file and send it your way. I also wanted to mention that we have a meeting scheduled for next Thursday to go over the dashboard design with the team. I'll send over the agenda and any relevant documents before then. If you need anything else in the meantime, just let me know and I'll get right on it. Sound good?";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_SOCKET_URL?.replace(/\/$/, "") ||
@@ -159,7 +159,8 @@ export function VoiceCloneModal({ open, onClose }: VoiceCloneModalProps) {
           <>
             <p className="mt-2 text-sm text-muted-foreground">
               Read the following paragraph out loud. Speak naturally, as if
-              you&apos;re on a phone call.
+              you&apos;re on a phone call. Record for at least 30 seconds for
+              best results.
             </p>
             <div className="mt-4 rounded-lg border border-border bg-background px-4 py-3 text-sm leading-relaxed text-foreground">
               {SAMPLE_TEXT}

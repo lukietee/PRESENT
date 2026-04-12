@@ -5,12 +5,6 @@ import { synthesize } from "../phone/elevenlabs-tts.js";
 import { sendAudioToTwilio } from "../phone/audio-sender.js";
 import { browserAgent } from "../browser-agent/agent.js";
 
-const FILLER_PHRASES = [
-  "Hold on.",
-  "Give me a sec.",
-  "Yeah one sec.",
-  "Lemme check.",
-];
 
 const sessions = new Map<string, Message[]>();
 const activeCalls = new Set<string>();
@@ -73,14 +67,7 @@ export async function handleTranscript(
           sentenceBuffer = "";
         }
 
-        // Play filler (audio only, not in transcript)
-        const filler = FILLER_PHRASES[Math.floor(Math.random() * FILLER_PHRASES.length)];
-        try {
-          const fillerAudio = await synthesize(filler);
-          sendAudioToTwilio(callSid, fillerAudio);
-        } catch {}
-
-        // Reset for next round
+        // Reset for next round — no filler, Gemini handles it naturally
         roundText = "";
         continue;
       }

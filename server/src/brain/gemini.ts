@@ -115,6 +115,7 @@ export async function* generateResponse(
       });
 
       const functionCalls: Array<{ name: string; args: any }> = [];
+      let roundText = "";
 
       for await (const chunk of response) {
         if (chunk.functionCalls && chunk.functionCalls.length > 0) {
@@ -126,16 +127,18 @@ export async function* generateResponse(
         }
 
         if (chunk.text) {
-          yield chunk.text;
+          roundText += chunk.text;
         }
       }
 
-      // No tool calls — we're done
+      // No tool calls — this is the final round, yield the text
       if (functionCalls.length === 0 || !toolExecutor) {
+        if (roundText) yield roundText;
         break;
       }
 
-      // Signal tool execution to orchestrator (plays filler phrase)
+      // Intermediate round — discard Gemini's filler text, play our own filler instead
+      if (roundText) console.log(`[gemini] (suppressed intermediate text): ${roundText}`);
       yield "__TOOL_CALL__";
 
       // Execute tools and build history entries

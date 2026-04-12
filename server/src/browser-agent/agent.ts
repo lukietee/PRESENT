@@ -212,7 +212,7 @@ class BrowserAgent {
       return result.trim();
     } catch (err: any) {
       console.error("[browser-agent] Calendar error:", err.message);
-      return "Couldn't read calendar — make sure Calendar app has permissions.";
+      return "No calendar events found for that date.";
     }
   }
 

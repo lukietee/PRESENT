@@ -85,11 +85,6 @@ export async function handleTranscript(
       logLabel: "orchestrator",
       errorFallback: "Hey, can I call you back in like 5 minutes?",
       speakSentence: (text) => speakAndEmit(text, callSid, io),
-      onToolCall: (toolName, toolArgs) => {
-        const toolContent = formatToolCall(toolName, toolArgs);
-        io.emit("call:transcript", { role: "tool", content: toolContent });
-        appendCallTranscript(callSid, { role: "tool", content: toolContent });
-      },
       toolExecutor: async (name, args) => {
         const toolId = randomUUID();
         const friendlyLabel = formatToolCall(name, JSON.stringify(args));
@@ -130,6 +125,9 @@ export async function handleTranscript(
             socket.on("tool:deny", onDeny);
           }
         });
+
+        // Persist to call transcript for Supabase
+        appendCallTranscript(callSid, { role: "tool", content: friendlyLabel });
 
         if (approved) {
           io.emit("tool:resolved", { id: toolId, status: "approved" });

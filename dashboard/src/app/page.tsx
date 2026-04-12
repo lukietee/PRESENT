@@ -10,11 +10,17 @@ export default function Home() {
             Present
           </h1>
           <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-            Dashboard (hour 0: verify server → client over Socket.IO).
+            Hour 1.5 — mock active sessions below. Socket.IO smoke test stays on the page until
+            hour 2 wiring.
           </p>
         </div>
         <HourZeroStatus />
-        <SessionMockSection />
+        <section className="flex w-full max-w-xl flex-col gap-4">
+          <h2 className="text-center text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            Active sessions
+          </h2>
+          <SessionMockSection />
+        </section>
       </main>
     </div>
   );

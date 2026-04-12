@@ -43,4 +43,9 @@ attachMediaStream(httpServer, io);
 
 httpServer.listen(config.port, () => {
   console.log(`Server listening on http://localhost:${config.port}`);
+  if (!config.serverUrl) {
+    console.warn(
+      "[config] SERVER_URL is empty — Twilio <Stream> URL in TwiML will be wrong. Use `npm run tunnel:server`, set SERVER_URL to the ngrok host, restart the server, then point Voice webhook at https://<host>/api/twilio/voice (see .env.example).",
+    );
+  }
 });

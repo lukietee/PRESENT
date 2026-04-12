@@ -12,6 +12,15 @@ import { endSession } from "../brain/orchestrator.js";
 export const twilioRouter = Router();
 
 twilioRouter.post("/api/twilio/voice", (req, res) => {
+  if (!config.serverUrl) {
+    console.error("[twilio] Incoming call but SERVER_URL is not set (ngrok host)");
+    res
+      .status(500)
+      .type("text/plain")
+      .send("SERVER_URL missing — set ngrok host in .env and restart the server.");
+    return;
+  }
+
   const callerNumber = req.body?.From ?? "unknown";
   console.log(`[twilio] Incoming call from ${callerNumber}`);
 

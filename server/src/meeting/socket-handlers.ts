@@ -2,6 +2,7 @@ import type { Server as SocketIOServer } from "socket.io";
 import { randomUUID } from "node:crypto";
 import type { ActiveMeetingState } from "./types.js";
 import { getMeetingCoordinator } from "./coordinator.js";
+import { saveSession } from "../supabase.js";
 
 const MEET_HOSTS = new Set(["meet.google.com", "www.meet.google.com"]);
 
@@ -58,6 +59,7 @@ export function registerMeetingSocketHandlers(io: SocketIOServer): void {
         });
         if (!activeMeeting || activeMeeting.id !== id) return;
         activeMeeting.status = "active";
+        activeMeeting.startedAt = new Date().toISOString();
         io.emit("meeting:active", { id });
         console.log("[meeting] active", id);
       } catch (err) {
@@ -77,6 +79,21 @@ export function registerMeetingSocketHandlers(io: SocketIOServer): void {
         await getMeetingCoordinator().leave();
       } catch (err) {
         console.error("[meeting] leave error:", err);
+      }
+      // Save to Supabase before clearing
+      if (current.transcript.length > 0) {
+        saveSession({
+          type: "meeting",
+          meeting_url: current.meetingUrl,
+          transcript: current.transcript.map((t) => ({
+            role: t.role,
+            content: t.content,
+            speaker: t.speaker,
+            timestamp: t.timestamp.toISOString(),
+          })),
+          started_at: current.startedAt ?? new Date().toISOString(),
+          ended_at: new Date().toISOString(),
+        });
       }
       activeMeeting = null;
       io.emit("meeting:ended", { id });

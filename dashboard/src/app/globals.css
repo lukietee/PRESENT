@@ -5,8 +5,8 @@
  * Page: bg-background, text-foreground
  * Surfaces: bg-card, border-border, border-header-border, shadow-card
  * Text: text-muted-foreground, text-subtle, text-label (via text-[10px] pattern + muted-foreground)
- * Phone accent: text-accent-phone, ring-accent-phone, from-[var(--phone-gradient-from)] to-[var(--phone-gradient-to)]
- * Meeting accent: text-accent-meeting, from-[var(--meeting-gradient-from)] to-[var(--meeting-gradient-to)]
+ * Phone accent: text-accent-phone, ring-accent-phone, bg-[var(--phone-header-bg)]
+ * Meeting accent: text-accent-meeting, bg-[var(--meeting-header-bg)]
  * Danger: bg-danger-muted, border-danger-border, text-danger (+ hover:border-rose-700/60 style via danger tokens)
  * Transcript: bg-bubble-caller-bg, text-bubble-caller-text, bg-bubble-agent-bg, text-bubble-agent-text,
  *   text-bubble-label-caller, text-bubble-label-agent
@@ -28,10 +28,8 @@
   --subtle: #a1a1aa;
   --accent-phone: #059669;
   --accent-meeting: #7c3aed;
-  --phone-gradient-from: rgb(16 185 129 / 0.22);
-  --phone-gradient-to: #e4e4e7;
-  --meeting-gradient-from: rgb(124 58 237 / 0.18);
-  --meeting-gradient-to: #e4e4e7;
+  --phone-header-bg: rgb(16 185 129 / 0.12);
+  --meeting-header-bg: rgb(124 58 237 / 0.10);
   --danger: #e11d48;
   --danger-muted: rgb(255 241 242 / 0.95);
   --danger-border: rgb(251 113 133 / 0.55);
@@ -82,10 +80,8 @@
   --subtle: #52525b;
   --accent-phone: #34d399;
   --accent-meeting: #a78bfa;
-  --phone-gradient-from: rgb(6 78 59 / 0.7);
-  --phone-gradient-to: #27272a;
-  --meeting-gradient-from: rgb(76 29 149 / 0.7);
-  --meeting-gradient-to: #27272a;
+  --phone-header-bg: rgb(6 78 59 / 0.35);
+  --meeting-header-bg: rgb(76 29 149 / 0.35);
   --danger: #fb7185;
   --danger-muted: rgb(136 19 55 / 0.3);
   --danger-border: rgb(136 19 55 / 0.6);
@@ -221,6 +217,60 @@
 @media (prefers-reduced-motion: reduce) {
   .card-interactive-hover:hover {
     box-shadow: var(--elevation-card);
+  }
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-dialog-enter {
+  animation: dialog-enter 0.15s ease-out both;
+}
+
+@keyframes pulse-subtle {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 3s ease-in-out infinite;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-toast-in {
+  animation: toast-in 0.2s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-dialog-enter,
+  .animate-pulse-subtle,
+  .animate-toast-in {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 }
 

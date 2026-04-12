@@ -18,6 +18,7 @@ export type ActiveMeetingState = {
   meetingUrl: string;
   transcript: MeetingTranscriptLine[];
   status: MeetingSessionStatus;
+  startedAt?: string;
 };
 
 export type MeetingRunContext = {

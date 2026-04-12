@@ -8,6 +8,17 @@ import { createDeepgramStream, sendAudio, closeDeepgramStream } from "./deepgram
 import { endSession } from "../brain/orchestrator.js";
 import { synthesize } from "./elevenlabs-tts.js";
 import { sendAudioToTwilio } from "./audio-sender.js";
+import { saveSession } from "../supabase.js";
+
+// Track call metadata + transcript lines for persistence
+const callMeta = new Map<string, { startedAt: string; transcript: { role: string; content: string; timestamp: string }[] }>();
+
+export function appendCallTranscript(callSid: string, line: { role: string; content: string }) {
+  const meta = callMeta.get(callSid);
+  if (meta) {
+    meta.transcript.push({ ...line, timestamp: new Date().toISOString() });
+  }
+}
 
 // ── TwiML webhook route ─────────────────────────────────────────────
 
@@ -86,6 +97,7 @@ export function attachMediaStream(httpServer: HttpServer, io: SocketIOServer) {
             `[twilio] Stream started — callSid=${callSid} streamSid=${streamSid}`
           );
           twilioStreams.set(callSid, { ws, streamSid });
+          callMeta.set(callSid, { startedAt: new Date().toISOString(), transcript: [] });
           io.emit("call:start", { id: callSid, callerNumber: "unknown" });
           createDeepgramStream(callSid, io);
 
@@ -93,6 +105,7 @@ export function attachMediaStream(httpServer: HttpServer, io: SocketIOServer) {
           synthesize("Hello?").then((audio) => {
             sendAudioToTwilio(callSid, audio);
             io.emit("call:transcript", { role: "agent", content: "Hello?" });
+            appendCallTranscript(callSid, { role: "agent", content: "Hello?" });
           }).catch(() => {});
           break;
 
@@ -104,13 +117,25 @@ export function attachMediaStream(httpServer: HttpServer, io: SocketIOServer) {
           break;
         }
 
-        case "stop":
+        case "stop": {
           console.log(`[twilio] Stream stopped — callSid=${callSid}`);
           twilioStreams.delete(callSid);
           closeDeepgramStream(callSid);
+          const meta = callMeta.get(callSid);
           endSession(callSid);
           io.emit("call:end", { id: callSid });
+          if (meta) {
+            callMeta.delete(callSid);
+            saveSession({
+              type: "phone",
+              caller_number: "unknown",
+              transcript: meta.transcript,
+              started_at: meta.startedAt,
+              ended_at: new Date().toISOString(),
+            });
+          }
           break;
+        }
       }
     });
 
@@ -119,8 +144,19 @@ export function attachMediaStream(httpServer: HttpServer, io: SocketIOServer) {
       if (callSid) {
         twilioStreams.delete(callSid);
         closeDeepgramStream(callSid);
+        const meta = callMeta.get(callSid);
         endSession(callSid);
         io.emit("call:end", { id: callSid });
+        if (meta) {
+          callMeta.delete(callSid);
+          saveSession({
+            type: "phone",
+            caller_number: "unknown",
+            transcript: meta.transcript,
+            started_at: meta.startedAt,
+            ended_at: new Date().toISOString(),
+          });
+        }
       }
     });
 

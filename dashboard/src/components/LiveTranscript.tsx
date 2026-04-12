@@ -2,8 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import type { TranscriptLine } from "@/types/session";
+import { ToolApproval } from "@/components/ToolApproval";
 
-function lineLabel(line: TranscriptLine): string {
+export function lineLabel(line: TranscriptLine): string {
   if (line.speaker?.trim()) {
     return line.speaker.trim();
   }
@@ -13,16 +14,26 @@ function lineLabel(line: TranscriptLine): string {
   return line.role.charAt(0).toUpperCase() + line.role.slice(1);
 }
 
+function formatTime(iso?: string): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
 export type LiveTranscriptProps = {
   messages: TranscriptLine[];
   className?: string;
   emptyLabel?: string;
+  onApproveTool?: (id: string) => void;
+  onDenyTool?: (id: string) => void;
 };
 
 export function LiveTranscript({
   messages,
   className,
   emptyLabel = "No messages yet.",
+  onApproveTool,
+  onDenyTool,
 }: LiveTranscriptProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -51,12 +62,32 @@ export function LiveTranscript({
         messages.map((line, i) => {
           const isAgent = line.role.toLowerCase() === "agent";
           const isTool = line.role.toLowerCase() === "tool";
+          const isToolPending = line.role === "tool-pending";
+
+          if (isToolPending && line.toolId && line.toolStatus) {
+            return (
+              <ToolApproval
+                key={`tool-${line.toolId}`}
+                toolId={line.toolId}
+                content={line.content}
+                status={line.toolStatus}
+                timestamp={line.timestamp}
+                onApprove={onApproveTool ?? (() => {})}
+                onDeny={onDenyTool ?? (() => {})}
+              />
+            );
+          }
 
           if (isTool) {
             return (
               <div key={i} className="flex justify-center">
-                <div className="rounded-lg px-3 py-1 text-xs font-mono bg-amber-950/40 text-amber-300 border border-amber-800/30">
-                  {line.content}
+                <div className="max-w-full overflow-hidden rounded-lg px-3 py-1 text-xs font-mono bg-amber-950/40 text-amber-300 border border-amber-800/30">
+                  <span className="break-all">{line.content}</span>
+                  {line.timestamp && (
+                    <span className="ml-2 font-sans text-[10px] text-amber-300/50 whitespace-nowrap">
+                      {formatTime(line.timestamp)}
+                    </span>
+                  )}
                 </div>
               </div>
             );
@@ -71,6 +102,11 @@ export function LiveTranscript({
                 className={`px-1 text-[10px] font-medium ${isAgent ? "text-bubble-label-agent" : "text-bubble-label-caller"}`}
               >
                 {lineLabel(line)}
+                {line.timestamp && (
+                  <span className="ml-1.5 font-normal text-subtle">
+                    {formatTime(line.timestamp)}
+                  </span>
+                )}
               </span>
               <div
                 className={`max-w-[min(85%,20rem)] rounded-xl px-3 py-1.5 text-sm leading-relaxed sm:max-w-[85%] ${

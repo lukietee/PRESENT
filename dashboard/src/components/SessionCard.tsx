@@ -1,8 +1,10 @@
 "use client";
 
-import { Phone, Video } from "lucide-react";
-import { LiveTranscript } from "@/components/LiveTranscript";
+import { useState } from "react";
+import { Phone, Video, Copy, Check } from "lucide-react";
+import { LiveTranscript, lineLabel } from "@/components/LiveTranscript";
 import { StatusBadge } from "@/components/StatusBadge";
+import { useElapsed } from "@/hooks/useElapsed";
 import type {
   MeetingSessionStatus,
   PhoneSessionStatus,
@@ -16,6 +18,9 @@ type SessionCardBase = {
   actionDisabled?: boolean;
   secondaryLabel?: string;
   onSecondaryAction?: () => void;
+  startedAt?: number | null;
+  onApproveTool?: (id: string) => void;
+  onDenyTool?: (id: string) => void;
   className?: string;
 };
 
@@ -42,16 +47,31 @@ export function SessionCard(props: SessionCardProps) {
     actionDisabled,
     secondaryLabel,
     onSecondaryAction,
+    startedAt,
+    onApproveTool,
+    onDenyTool,
     className,
   } = props;
 
   const isPhone = variant === "phone";
   const Icon = isPhone ? Phone : Video;
   const label = isPhone ? "Phone" : "Meeting";
+  const elapsed = useElapsed(startedAt ?? null);
+  const [copied, setCopied] = useState(false);
 
-  const headerGradient = isPhone
-    ? "from-[var(--phone-gradient-from)] to-[var(--phone-gradient-to)]"
-    : "from-[var(--meeting-gradient-from)] to-[var(--meeting-gradient-to)]";
+  function handleCopy() {
+    const text = messages
+      .map((m) => `${lineLabel(m)}: ${m.content}`)
+      .join("\n");
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  const headerBg = isPhone
+    ? "bg-[var(--phone-header-bg)]"
+    : "bg-[var(--meeting-header-bg)]";
 
   const iconColor = isPhone ? "text-accent-phone" : "text-accent-meeting";
 
@@ -64,7 +84,7 @@ export function SessionCard(props: SessionCardProps) {
         .filter(Boolean)
         .join(" ")}
     >
-      <div className={`bg-gradient-to-r ${headerGradient} px-5 py-4`}>
+      <div className={`${headerBg} px-5 py-4`}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Icon size={15} className={iconColor} strokeWidth={2} />
@@ -72,11 +92,18 @@ export function SessionCard(props: SessionCardProps) {
               {label}
             </span>
           </div>
-          {variant === "phone" ? (
-            <StatusBadge variant="phone" status={status} />
-          ) : (
-            <StatusBadge variant="meeting" status={status} />
-          )}
+          <div className="flex items-center gap-2.5">
+            {elapsed && (
+              <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                {elapsed}
+              </span>
+            )}
+            {variant === "phone" ? (
+              <StatusBadge variant="phone" status={status} />
+            ) : (
+              <StatusBadge variant="meeting" status={status} />
+            )}
+          </div>
         </div>
         {subtitle && (
           <p
@@ -89,10 +116,22 @@ export function SessionCard(props: SessionCardProps) {
       </div>
 
       <div className="border-t border-header-border px-4 py-3">
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-subtle">
-          Live Transcript
-        </p>
-        <LiveTranscript messages={messages} />
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-subtle">
+            Live Transcript
+          </p>
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="text-subtle transition-colors hover:text-muted-foreground"
+              title="Copy transcript"
+            >
+              {copied ? <Check size={13} /> : <Copy size={13} />}
+            </button>
+          )}
+        </div>
+        <LiveTranscript messages={messages} onApproveTool={onApproveTool} onDenyTool={onDenyTool} />
       </div>
 
       <div className="flex items-center gap-2 border-t border-header-border px-4 py-3">

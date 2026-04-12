@@ -38,6 +38,21 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
 
+// Past sessions API
+import { supabase } from "./supabase.js";
+app.get("/api/sessions", async (_req, res) => {
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("*")
+    .order("ended_at", { ascending: false })
+    .limit(50);
+  if (error) {
+    res.status(500).json({ error: error.message });
+  } else {
+    res.json(data);
+  }
+});
+
 // Twilio routes
 app.use(twilioRouter);
 

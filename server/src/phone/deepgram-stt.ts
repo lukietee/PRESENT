@@ -3,6 +3,7 @@ import type { Server as SocketIOServer } from "socket.io";
 import { config } from "../config.js";
 import { handleTranscript } from "../brain/orchestrator.js";
 import { clearTwilioAudio } from "./audio-sender.js";
+import { appendCallTranscript } from "./twilio.js";
 
 const connections = new Map<string, { socket: any; ready: boolean }>();
 const utteranceBuffers = new Map<string, string>();
@@ -67,6 +68,7 @@ export async function createDeepgramStream(callSid: string, io: SocketIOServer) 
           console.log(`[deepgram] utterance: ${fullUtterance}`);
           clearTwilioAudio(callSid);
           io.emit("call:transcript", { role: "caller", content: fullUtterance });
+          appendCallTranscript(callSid, { role: "caller", content: fullUtterance });
           handleTranscript(callSid, fullUtterance, io);
         }
       }, debounceMs);

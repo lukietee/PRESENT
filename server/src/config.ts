@@ -36,6 +36,10 @@ export const config = {
     apiKey: process.env.HEYGEN_API_KEY || "",
     avatarId: process.env.HEYGEN_AVATAR_ID || "",
   },
+  supabase: {
+    url: process.env.SUPABASE_URL || "",
+    anonKey: process.env.SUPABASE_ANON_KEY || "",
+  },
   /** Google Meet blocks obvious automation — see meeting-joiner + .env.example */
   meeting: {
     /** Use installed Google Chrome instead of bundled Chromium (recommended for Meet). */

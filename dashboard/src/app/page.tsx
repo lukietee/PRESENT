@@ -1,5 +1,7 @@
+import { Phone } from "lucide-react";
 import { ConnectionStatus } from "@/components/ConnectionStatus";
 import { ActiveSessionsSection } from "@/components/ActiveSessionsSection";
+import { PastSessionsWrapper } from "@/components/PastSessionsWrapper";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function Home() {
@@ -8,9 +10,12 @@ export default function Home() {
       <header className="sticky top-0 z-10 border-b border-header-border bg-header-bg backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="truncate text-lg font-semibold tracking-tight text-foreground">
-              Present
-            </span>
+            <div className="flex items-center gap-2">
+              <Phone size={18} className="text-accent-phone" strokeWidth={2} />
+              <span className="truncate text-lg font-semibold tracking-tight text-foreground">
+                Present!
+              </span>
+            </div>
             <span className="shrink-0 rounded-full border border-pill-live-border bg-pill-live-bg px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-pill-live-text">
               Live
             </span>
@@ -32,6 +37,16 @@ export default function Home() {
           </p>
         </div>
         <ActiveSessionsSection />
+
+        <div className="mt-12 mb-8">
+          <h2 className="text-balance text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+            Past Sessions
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Previous calls and meetings
+          </p>
+        </div>
+        <PastSessionsWrapper />
       </main>
     </div>
   );

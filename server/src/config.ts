@@ -16,4 +16,7 @@ export const config = {
   deepgram: {
     apiKey: process.env.DEEPGRAM_API_KEY || "",
   },
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || "",
+  },
 } as const;

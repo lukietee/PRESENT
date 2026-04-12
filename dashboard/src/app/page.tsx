@@ -1,5 +1,6 @@
 import { ConnectionStatus } from "@/components/ConnectionStatus";
 import { ActiveSessionsSection } from "@/components/ActiveSessionsSection";
+import { PastSessionsWrapper } from "@/components/PastSessionsWrapper";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function Home() {
@@ -32,6 +33,16 @@ export default function Home() {
           </p>
         </div>
         <ActiveSessionsSection />
+
+        <div className="mt-12 mb-8">
+          <h2 className="text-balance text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+            Past Sessions
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Previous calls and meetings
+          </p>
+        </div>
+        <PastSessionsWrapper />
       </main>
     </div>
   );

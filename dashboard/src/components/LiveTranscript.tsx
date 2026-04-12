@@ -61,10 +61,10 @@ export function LiveTranscript({
           if (isTool) {
             return (
               <div key={i} className="flex justify-center">
-                <div className="rounded-lg px-3 py-1 text-xs font-mono bg-amber-950/40 text-amber-300 border border-amber-800/30">
-                  {line.content}
+                <div className="max-w-full overflow-hidden rounded-lg px-3 py-1 text-xs font-mono bg-amber-950/40 text-amber-300 border border-amber-800/30">
+                  <span className="break-all">{line.content}</span>
                   {line.timestamp && (
-                    <span className="ml-2 font-sans text-[10px] text-amber-300/50">
+                    <span className="ml-2 font-sans text-[10px] text-amber-300/50 whitespace-nowrap">
                       {formatTime(line.timestamp)}
                     </span>
                   )}

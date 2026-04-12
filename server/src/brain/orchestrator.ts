@@ -4,6 +4,7 @@ import { PHONE_SYSTEM_PROMPT } from "./system-prompt.js";
 import { synthesize } from "../phone/elevenlabs-tts.js";
 import { sendAudioToTwilio } from "../phone/audio-sender.js";
 import { runStreamingGeminiReply } from "./streaming-transcript-handler.js";
+import { appendCallTranscript } from "../phone/twilio.js";
 
 const sessions = new Map<string, Message[]>();
 const activeCalls = new Set<string>();
@@ -16,6 +17,7 @@ async function speakAndEmit(
   if (!text.trim()) return;
   console.log(`[orchestrator] agent: ${text}`);
   io.emit("call:transcript", { role: "agent", content: text });
+  appendCallTranscript(callSid, { role: "agent", content: text });
   try {
     const audio = await synthesize(text);
     sendAudioToTwilio(callSid, audio);
@@ -50,10 +52,9 @@ export async function handleTranscript(
       errorFallback: "Hey, can I call you back in like 5 minutes?",
       speakSentence: (text) => speakAndEmit(text, callSid, io),
       onToolCall: (toolName, toolArgs) => {
-        io.emit("call:transcript", {
-          role: "tool",
-          content: `🔧 ${toolName}(${toolArgs})`,
-        });
+        const toolContent = `🔧 ${toolName}(${toolArgs})`;
+        io.emit("call:transcript", { role: "tool", content: toolContent });
+        appendCallTranscript(callSid, { role: "tool", content: toolContent });
       },
     });
   } finally {
@@ -61,8 +62,11 @@ export async function handleTranscript(
   }
 }
 
-export function endSession(callSid: string) {
+/** Returns the transcript before clearing the session. */
+export function endSession(callSid: string): Message[] | null {
+  const history = sessions.get(callSid) ?? null;
   sessions.delete(callSid);
   activeCalls.delete(callSid);
   console.log(`[orchestrator] Session ended: ${callSid}`);
+  return history;
 }

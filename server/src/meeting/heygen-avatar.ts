@@ -150,7 +150,7 @@ export class LiveAvatarSession {
     }
 
     const livekitUrl = pickString(startJson, ["livekit_url"]);
-    const livekitToken = pickString(startJson, ["livekit_token"]);
+    const livekitToken = pickString(startJson, ["livekit_token", "livekit_client_token"]);
     if (!livekitUrl || !livekitToken) {
       logJsonError("start response missing livekit_url / livekit_token", startJson);
       return false;

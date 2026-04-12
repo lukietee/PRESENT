@@ -26,6 +26,7 @@ function meetBrowserLaunchOptions(): Parameters<
     // Reduces automation fingerprint (Playwright adds --enable-automation by default).
     "--disable-blink-features=AutomationControlled",
     "--disable-infobars",
+    "--disable-dev-shm-usage",
   ];
   if (config.meeting.useFakeMediaStream) {
     args.push("--use-fake-ui-for-media-stream");
@@ -38,6 +39,7 @@ function meetBrowserLaunchOptions(): Parameters<
     ignoreHTTPSErrors: true,
     ignoreDefaultArgs: ["--enable-automation"],
     userAgent: config.meeting.userAgent || DEFAULT_MEET_USER_AGENT,
+    permissions: ["camera", "microphone"],
   };
 
   if (config.meeting.useChromeChannel) {
@@ -45,6 +47,41 @@ function meetBrowserLaunchOptions(): Parameters<
   }
 
   return opts;
+}
+
+/**
+ * Check if the persistent profile has a Google sign-in cookie.
+ * If not, open accounts.google.com and wait for the user to sign in manually (one-time setup).
+ */
+async function ensureGoogleSignIn(ctx: BrowserContext): Promise<void> {
+  const cookies = await ctx.cookies("https://accounts.google.com");
+  const hasSession = cookies.some(
+    (c) => c.name === "SID" || c.name === "SSID" || c.name === "__Secure-1PSID"
+  );
+  if (hasSession) {
+    console.log("[meeting-joiner] Google session found in profile — skipping sign-in");
+    return;
+  }
+
+  console.log("[meeting-joiner] No Google session found — opening sign-in page (one-time setup)");
+  const page = ctx.pages()[0] ?? (await ctx.newPage());
+  await page.goto("https://accounts.google.com/signin", { waitUntil: "domcontentloaded", timeout: 30_000 });
+
+  // Wait for user to complete sign-in (poll for session cookie, up to 5 minutes)
+  const deadline = Date.now() + 300_000;
+  while (Date.now() < deadline) {
+    const nowCookies = await ctx.cookies("https://accounts.google.com");
+    const signedIn = nowCookies.some(
+      (c) => c.name === "SID" || c.name === "SSID" || c.name === "__Secure-1PSID"
+    );
+    if (signedIn) {
+      console.log("[meeting-joiner] Google sign-in complete!");
+      await new Promise((r) => setTimeout(r, 2000));
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  console.warn("[meeting-joiner] Sign-in timed out after 5 minutes — proceeding anyway");
 }
 
 export async function launchMeetingBrowser(): Promise<BrowserContext> {
@@ -73,6 +110,13 @@ export async function launchMeetingBrowser(): Promise<BrowserContext> {
   console.log(
     `[meeting-joiner] ${engine} launched (Meet profile: ${MEET_USER_DATA_DIR}, fakeMedia=${config.meeting.useFakeMediaStream})`
   );
+
+  await ctx.grantPermissions(["camera", "microphone"], {
+    origin: "https://meet.google.com",
+  });
+
+  await ensureGoogleSignIn(ctx);
+
   return ctx;
 }
 
@@ -89,18 +133,57 @@ async function dismissOverlays(page: Page): Promise<void> {
     /Use without/i,
     /Continue without microphone/i,
     /Continue without camera/i,
+    /Use without an account/i,
+    /Join without signing in/i,
+    /Use Meet without an account/i,
   ];
-  for (let pass = 0; pass < 3; pass++) {
+  for (let pass = 0; pass < 4; pass++) {
     let hit = false;
+
+    // Try role="button" first
     for (const label of dismissLabels) {
       const roleBtn = page.getByRole("button", { name: label }).first();
       if (await roleBtn.isVisible().catch(() => false)) {
         await roleBtn.click({ timeout: 3000 }).catch(() => {});
         hit = true;
-        await new Promise((r) => setTimeout(r, 400));
+        console.log(`[meeting-joiner] dismissed overlay (role button): ${label}`);
+        await new Promise((r) => setTimeout(r, 500));
       }
     }
+
+    // Also try text-based clicks — Google Meet uses custom elements
+    for (const label of dismissLabels) {
+      const textEl = page.getByText(label, { exact: false }).first();
+      if (await textEl.isVisible().catch(() => false)) {
+        await textEl.click({ timeout: 3000 }).catch(() => {});
+        hit = true;
+        console.log(`[meeting-joiner] dismissed overlay (text): ${label}`);
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+
+    // Try clicking any visible element that looks like a dismiss button
+    const genericDismiss = [
+      'button:has-text("Got it")',
+      '[data-mdc-dialog-action="ok"]',
+      '[data-mdc-dialog-action="accept"]',
+      '.VfPpkd-LgbsSe:has-text("Got it")',
+      // "Camera might be blocked" toast dismiss
+      '[aria-label="Close"]',
+      'button[aria-label="Dismiss"]',
+    ];
+    for (const sel of genericDismiss) {
+      const el = page.locator(sel).first();
+      if (await el.isVisible().catch(() => false)) {
+        await el.click({ timeout: 3000 }).catch(() => {});
+        hit = true;
+        console.log(`[meeting-joiner] dismissed overlay (selector): ${sel}`);
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+
     if (!hit) break;
+    await new Promise((r) => setTimeout(r, 500));
   }
 }
 
@@ -165,16 +248,38 @@ async function tryClickJoin(page: Page): Promise<boolean> {
 export async function joinGoogleMeet(page: Page, meetUrl: string): Promise<void> {
   await page.goto(meetUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
   await page.waitForLoadState("load", { timeout: 60_000 }).catch(() => {});
-  await new Promise((r) => setTimeout(r, 2000));
+  console.log("[meeting-joiner] page loaded, waiting 6s for overlays to render…");
+  await new Promise((r) => setTimeout(r, 6000));
 
-  await dismissOverlays(page);
+  // Dismiss sign-in overlays aggressively — multiple passes with waits
+  for (let i = 0; i < 4; i++) {
+    await dismissOverlays(page);
+    await new Promise((r) => setTimeout(r, 1000));
+  }
 
-  // Guest name field (sometimes shown)
-  const nameInput = page.locator('input[type="text"]').first();
-  if (await nameInput.isVisible({ timeout: 8000 }).catch(() => false)) {
-    await nameInput.fill("Present AI").catch(() => {});
-    await nameInput.press("Enter").catch(() => {});
-    await new Promise((r) => setTimeout(r, 600));
+  // Guest name field — try multiple selectors
+  const nameSelectors = [
+    'input[type="text"]',
+    'input[placeholder*="name" i]',
+    'input[aria-label*="name" i]',
+    'input[aria-label*="Your name" i]',
+  ];
+
+  let nameEntered = false;
+  for (const sel of nameSelectors) {
+    const nameInput = page.locator(sel).first();
+    if (await nameInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await nameInput.clear().catch(() => {});
+      await nameInput.fill("Lucas").catch(() => {});
+      console.log("[meeting-joiner] entered guest name via", sel);
+      nameEntered = true;
+      await new Promise((r) => setTimeout(r, 600));
+      break;
+    }
+  }
+
+  if (!nameEntered) {
+    console.warn("[meeting-joiner] no name input found — may need sign-in");
   }
 
   await dismissOverlays(page);

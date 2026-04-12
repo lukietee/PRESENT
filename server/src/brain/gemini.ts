@@ -56,6 +56,38 @@ const toolDeclarations = [
       properties: {},
     },
   },
+  {
+    name: "list_files",
+    description: "Search for files on the computer (Desktop, Documents, Downloads). Use this to find documents, spreadsheets, etc.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        directory: { type: "string" as const, description: "Base directory to search (default: user home)" },
+        search: { type: "string" as const, description: "Filename to search for (partial match)" },
+      },
+    },
+  },
+  {
+    name: "open_file",
+    description: "Open a file on the computer with its default app (Word, Preview, etc.) and read its contents. Use this for .docx, .txt, .md, .csv files.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        path: { type: "string" as const, description: "Full file path to open" },
+      },
+      required: ["path"],
+    },
+  },
+  {
+    name: "check_calendar",
+    description: "Open the Calendar app and read scheduled events. Use this when the caller asks about meetings, schedule, availability, what's coming up, or anything time/date related.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        date: { type: "string" as const, description: "Date to check (e.g. 'today', 'April 15, 2026'). Defaults to today." },
+      },
+    },
+  },
 ];
 
 const MAX_TOOL_ROUNDS = 10;

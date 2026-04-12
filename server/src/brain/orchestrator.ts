@@ -3,8 +3,17 @@ import { generateResponse, type Message } from "./gemini.js";
 import { PHONE_SYSTEM_PROMPT } from "./system-prompt.js";
 import { synthesize } from "../phone/elevenlabs-tts.js";
 import { sendAudioToTwilio } from "../phone/audio-sender.js";
+import { browserAgent } from "../browser-agent/agent.js";
+
+const FILLER_PHRASES = [
+  "Hold on.",
+  "Give me a sec.",
+  "Yeah one sec.",
+  "Lemme check.",
+];
 
 const sessions = new Map<string, Message[]>();
+const activeCalls = new Set<string>();
 
 const SENTENCE_END = /(?<=[.?!])\s+/;
 
@@ -17,11 +26,33 @@ function extractSentences(buffer: string): { sentences: string[]; remainder: str
   return { sentences: parts, remainder };
 }
 
+async function speakAndEmit(
+  text: string,
+  callSid: string,
+  io: SocketIOServer
+) {
+  if (!text.trim()) return;
+  console.log(`[orchestrator] agent: ${text}`);
+  io.emit("call:transcript", { role: "agent", content: text });
+  try {
+    const audio = await synthesize(text);
+    sendAudioToTwilio(callSid, audio);
+  } catch (err) {
+    console.error("[orchestrator] TTS error:", err);
+  }
+}
+
 export async function handleTranscript(
   callSid: string,
   transcript: string,
   io: SocketIOServer
 ) {
+  if (activeCalls.has(callSid)) {
+    console.log(`[orchestrator] Skipping — already responding to callSid=${callSid}`);
+    return;
+  }
+  activeCalls.add(callSid);
+
   if (!sessions.has(callSid)) {
     sessions.set(callSid, []);
   }
@@ -29,53 +60,62 @@ export async function handleTranscript(
 
   history.push({ role: "user", parts: [{ text: transcript }] });
 
-  let fullResponse = "";
+  let roundText = "";
   let sentenceBuffer = "";
+  let allText = "";
 
   try {
-    for await (const chunk of generateResponse(history, PHONE_SYSTEM_PROMPT)) {
-      fullResponse += chunk;
+    for await (const chunk of generateResponse(history, PHONE_SYSTEM_PROMPT, browserAgent.execute.bind(browserAgent))) {
+      if (chunk === "__TOOL_CALL__") {
+        // Flush any remaining text from this round before tool executes
+        if (sentenceBuffer.trim()) {
+          await speakAndEmit(sentenceBuffer.trim(), callSid, io);
+          sentenceBuffer = "";
+        }
+
+        // Play filler (audio only, not in transcript)
+        const filler = FILLER_PHRASES[Math.floor(Math.random() * FILLER_PHRASES.length)];
+        try {
+          const fillerAudio = await synthesize(filler);
+          sendAudioToTwilio(callSid, fillerAudio);
+        } catch {}
+
+        // Reset for next round
+        roundText = "";
+        continue;
+      }
+
+      roundText += chunk;
+      allText += chunk;
       sentenceBuffer += chunk;
 
       const { sentences, remainder } = extractSentences(sentenceBuffer);
       sentenceBuffer = remainder;
 
-      // TTS each complete sentence sequentially (preserves order)
       for (const sentence of sentences) {
-        try {
-          const audio = await synthesize(sentence);
-          sendAudioToTwilio(callSid, audio);
-        } catch (err) {
-          console.error("[orchestrator] TTS error:", err);
-        }
+        await speakAndEmit(sentence, callSid, io);
       }
     }
   } catch (err) {
     console.error("[orchestrator] Error:", err);
-    fullResponse = "Hey, can I call you back in like 5 minutes?";
+    await speakAndEmit("Hey, can I call you back in like 5 minutes?", callSid, io);
   }
 
-  // Flush remaining text in buffer
+  // Flush remaining text
   if (sentenceBuffer.trim()) {
-    try {
-      const audio = await synthesize(sentenceBuffer.trim());
-      sendAudioToTwilio(callSid, audio);
-    } catch (err) {
-      console.error("[orchestrator] TTS flush error:", err);
-    }
+    await speakAndEmit(sentenceBuffer.trim(), callSid, io);
   }
 
-  if (!fullResponse.trim()) {
-    fullResponse = "Hmm, let me think about that...";
+  // Add full response to history for context
+  if (allText.trim()) {
+    history.push({ role: "model", parts: [{ text: allText }] });
   }
 
-  console.log(`[orchestrator] agent: ${fullResponse}`);
-  io.emit("call:transcript", { role: "agent", content: fullResponse });
-
-  history.push({ role: "model", parts: [{ text: fullResponse }] });
+  activeCalls.delete(callSid);
 }
 
 export function endSession(callSid: string) {
   sessions.delete(callSid);
+  activeCalls.delete(callSid);
   console.log(`[orchestrator] Session ended: ${callSid}`);
 }

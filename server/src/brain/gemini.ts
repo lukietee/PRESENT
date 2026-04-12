@@ -5,76 +5,135 @@ const ai = new GoogleGenAI({ apiKey: config.gemini.apiKey });
 
 export interface Message {
   role: "user" | "model";
-  parts: Array<{ text: string }>;
+  parts: Array<{ text?: string; functionCall?: any; functionResponse?: any }>;
 }
+
+export type ToolExecutor = (
+  name: string,
+  args: Record<string, string>
+) => Promise<string>;
 
 const toolDeclarations = [
   {
     name: "browse_url",
-    description: "Open a URL and extract information from the page",
+    description: "Open a URL in the browser and read the page content. Use this to navigate to any website.",
     parameters: {
       type: "object" as const,
       properties: {
-        url: { type: "string" as const, description: "URL to open" },
-        query: { type: "string" as const, description: "What information to extract" },
+        url: { type: "string" as const, description: "The full URL to open" },
       },
-      required: ["url", "query"],
+      required: ["url"],
     },
   },
   {
-    name: "check_github",
-    description: "Check a GitHub repo for PRs, issues, commits, or conflicts",
+    name: "click",
+    description: "Click an element on the current page. Use text to find a button/link by its visible text, or selector for CSS selectors.",
     parameters: {
       type: "object" as const,
       properties: {
-        repo: { type: "string" as const, description: "GitHub repo (owner/name)" },
-        action: { type: "string" as const, description: "What to check: prs, issues, commits, conflicts" },
+        text: { type: "string" as const, description: "Visible text of the element to click (e.g. 'Edit this file', 'Sign in', 'Submit')" },
+        selector: { type: "string" as const, description: "CSS selector of the element to click (use only if text doesn't work)" },
       },
-      required: ["repo", "action"],
     },
   },
   {
-    name: "search_google",
-    description: "Search Google for information",
+    name: "type",
+    description: "Type text into an input field or text area on the current page. Use selector to target a specific field, or omit to type into the currently focused element.",
     parameters: {
       type: "object" as const,
       properties: {
-        query: { type: "string" as const, description: "Search query" },
+        text: { type: "string" as const, description: "The text to type" },
+        selector: { type: "string" as const, description: "CSS selector of the input/textarea to type into (optional)" },
       },
-      required: ["query"],
+      required: ["text"],
+    },
+  },
+  {
+    name: "read_page",
+    description: "Read the current page content without navigating. Use this to check the current state of the page after clicking or typing.",
+    parameters: {
+      type: "object" as const,
+      properties: {},
     },
   },
 ];
 
+const MAX_TOOL_ROUNDS = 10;
+
 export async function* generateResponse(
   history: Message[],
-  systemPrompt: string
+  systemPrompt: string,
+  toolExecutor?: ToolExecutor
 ): AsyncGenerator<string> {
+  let currentHistory = [...history];
+  let round = 0;
+
   try {
-    const response = await ai.models.generateContentStream({
-      model: "gemini-2.5-flash",
-      contents: history,
-      config: {
-        systemInstruction: systemPrompt,
-        tools: [{ functionDeclarations: toolDeclarations }],
-      },
-    });
+    while (round < MAX_TOOL_ROUNDS) {
+      round++;
 
-    for await (const chunk of response) {
-      // Check for function calls
-      if (chunk.functionCalls && chunk.functionCalls.length > 0) {
-        for (const call of chunk.functionCalls) {
-          console.log(`[gemini] Tool call requested: ${call.name}`, call.args);
+      const response = await ai.models.generateContentStream({
+        model: "gemini-2.5-flash",
+        contents: currentHistory,
+        config: {
+          systemInstruction: systemPrompt,
+          tools: [{ functionDeclarations: toolDeclarations }],
+          maxOutputTokens: 200,
+        },
+      });
+
+      const functionCalls: Array<{ name: string; args: any }> = [];
+
+      for await (const chunk of response) {
+        if (chunk.functionCalls && chunk.functionCalls.length > 0) {
+          for (const call of chunk.functionCalls) {
+            console.log(`[gemini] Tool call (round ${round}): ${call.name}`, call.args);
+            functionCalls.push({ name: call.name!, args: call.args });
+          }
+          continue;
         }
-        continue;
+
+        if (chunk.text) {
+          yield chunk.text;
+        }
       }
 
-      if (chunk.text) {
-        yield chunk.text;
+      // No tool calls — we're done
+      if (functionCalls.length === 0 || !toolExecutor) {
+        break;
       }
+
+      // Signal tool execution to orchestrator (plays filler phrase)
+      yield "__TOOL_CALL__";
+
+      // Execute tools and build history entries
+      const functionCallParts: any[] = [];
+      const toolResultParts: any[] = [];
+
+      for (const call of functionCalls) {
+        console.log(`[gemini] Executing: ${call.name} (round ${round})`);
+        const result = await toolExecutor(call.name, call.args);
+        console.log(`[gemini] Result (${call.name}): ${result.slice(0, 150)}...`);
+
+        functionCallParts.push({ functionCall: { name: call.name, args: call.args } });
+        toolResultParts.push({
+          functionResponse: { name: call.name, response: { result } },
+        });
+      }
+
+      // Extend history for next round
+      currentHistory = [
+        ...currentHistory,
+        { role: "model", parts: functionCallParts },
+        { role: "user", parts: toolResultParts },
+      ];
+    }
+
+    if (round >= MAX_TOOL_ROUNDS) {
+      console.warn("[gemini] Hit max tool rounds");
     }
   } catch (err) {
     console.error("[gemini] Error:", err);
-    yield "Sorry, I didn't catch that. Can you say that again?";
+    yield "Sorry, I'm having trouble with that right now.";
   }
 }

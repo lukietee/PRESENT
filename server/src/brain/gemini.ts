@@ -88,6 +88,34 @@ const toolDeclarations = [
       },
     },
   },
+  {
+    name: "send_email",
+    description: "Send an email via Outlook or Mail app. Can include file attachments. Use when the caller asks to send something, email someone, or share a document. ASK for the recipient's email address if not provided.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        to: { type: "string" as const, description: "Recipient email address" },
+        subject: { type: "string" as const, description: "Email subject line" },
+        body: { type: "string" as const, description: "Email body text — write it naturally as if the user wrote it" },
+        attachmentPath: { type: "string" as const, description: "Full file path to attach (from a previous list_files result). Optional." },
+      },
+      required: ["to", "subject", "body"],
+    },
+  },
+  {
+    name: "create_event",
+    description: "Create a new event in the Apple Calendar app. Use this when the caller wants to schedule a meeting, set a reminder, or book time. Accepts day names (Friday, Monday) or full dates.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        title: { type: "string" as const, description: "Event title (e.g. 'Meeting with Jake', 'Code review')" },
+        date: { type: "string" as const, description: "Day name (e.g. 'Friday', 'Monday') or full date (e.g. 'April 15, 2026')" },
+        startTime: { type: "string" as const, description: "Start time in 24h format (e.g. '14:00', '19:00'). Defaults to 09:00." },
+        endTime: { type: "string" as const, description: "End time in 24h format (e.g. '15:00'). Defaults to 1 hour after start." },
+      },
+      required: ["title", "date"],
+    },
+  },
 ];
 
 const MAX_TOOL_ROUNDS = 10;

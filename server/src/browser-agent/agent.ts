@@ -41,6 +41,10 @@ class BrowserAgent {
           return await this.openFile(args.path);
         case "check_calendar":
           return await this.checkCalendar(args.date);
+        case "create_event":
+          return await this.createEvent(args.title, args.date, args.startTime, args.endTime);
+        case "send_email":
+          return await this.sendEmail(args.to, args.subject, args.body, args.attachmentPath);
         default:
           return `Unknown tool: ${toolName}`;
       }
@@ -216,6 +220,137 @@ class BrowserAgent {
     } catch (err: any) {
       console.error("[browser-agent] Calendar error:", err.message);
       return "No calendar events found for that date.";
+    }
+  }
+
+  private parseRelativeDate(dateStr: string): Date {
+    const now = new Date();
+    const lower = dateStr.toLowerCase().trim();
+
+    // Check for day names
+    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    const dayIndex = days.indexOf(lower);
+    if (dayIndex >= 0) {
+      const today = now.getDay();
+      let diff = dayIndex - today;
+      if (diff <= 0) diff += 7; // Next occurrence
+      const d = new Date(now);
+      d.setDate(d.getDate() + diff);
+      return d;
+    }
+
+    if (lower === "today") return now;
+    if (lower === "tomorrow") {
+      const d = new Date(now);
+      d.setDate(d.getDate() + 1);
+      return d;
+    }
+
+    // Try native Date parsing for absolute dates
+    const parsed = new Date(dateStr);
+    if (!isNaN(parsed.getTime())) return parsed;
+
+    // Fallback: return tomorrow
+    const d = new Date(now);
+    d.setDate(d.getDate() + 1);
+    return d;
+  }
+
+  private async createEvent(title: string, date: string, startTime?: string, endTime?: string): Promise<string> {
+    const eventDate = this.parseRelativeDate(date);
+    const startH = parseInt(startTime?.split(":")[0] || "9");
+    const startM = parseInt(startTime?.split(":")[1] || "0");
+    const endH = endTime ? parseInt(endTime.split(":")[0]) : startH + 1;
+    const endM = endTime ? parseInt(endTime.split(":")[1] || "0") : startM;
+
+    // Build start/end Date objects
+    const start = new Date(eventDate);
+    start.setHours(startH, startM, 0, 0);
+    const end = new Date(eventDate);
+    end.setHours(endH, endM, 0, 0);
+
+    // Format as ICS timestamps: 20260418T140000
+    const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "");
+
+    const safeTitle = title.replace(/[^a-zA-Z0-9 .,!?@#&()\-]/g, "");
+    const icsContent = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Present//PhoneClone//EN",
+      "BEGIN:VEVENT",
+      `DTSTART:${fmt(start)}`,
+      `DTEND:${fmt(end)}`,
+      `SUMMARY:${safeTitle}`,
+      `UID:${Date.now()}@present`,
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+
+    const tmpFile = `/tmp/present-event-${Date.now()}.ics`;
+    try {
+      await fs.writeFile(tmpFile, icsContent);
+      exec(`open "${tmpFile}"`);
+
+      const dateStr = start.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+      const timeStr = start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      console.log(`[browser-agent] Created event: ${safeTitle} on ${dateStr} at ${timeStr}`);
+      return `Event created: ${safeTitle} on ${dateStr} at ${timeStr}`;
+    } catch (err: any) {
+      console.error("[browser-agent] Create event error:", err.message);
+      return "Couldn't create the calendar event.";
+    }
+  }
+
+  private async sendEmail(to: string, subject: string, body: string, attachmentPath?: string): Promise<string> {
+    if (!to || !subject || !body) return "Error: need to, subject, and body for email";
+
+    const safeTo = to.replace(/"/g, "");
+    const safeSubject = subject.replace(/"/g, '\\"');
+    const safeBody = body.replace(/"/g, '\\"').replace(/\n/g, "\\n");
+
+    let attachmentLine = "";
+    if (attachmentPath) {
+      attachmentLine = `make new attachment at newMessage with properties {file:(POSIX file "${attachmentPath.replace(/"/g, "")}")}`;
+    }
+
+    // Try Outlook first, fall back to Mail.app
+    const outlookScript = `
+tell application "Microsoft Outlook"
+  activate
+  set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}"}
+  make new recipient at newMessage with properties {email address:{address:"${safeTo}"}}
+  ${attachmentLine}
+  send newMessage
+end tell
+return "Email sent to ${safeTo}"
+`;
+
+    const mailScript = `
+tell application "Mail"
+  activate
+  set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:true}
+  tell newMessage
+    make new to recipient at end of to recipients with properties {address:"${safeTo}"}
+  end tell
+  send newMessage
+end tell
+return "Email sent to ${safeTo}"
+`;
+
+    // Check if Outlook is installed
+    const tmpFile = `/tmp/present-email-${Date.now()}.scpt`;
+    try {
+      const checkOutlook = execSync('mdfind "kMDItemCFBundleIdentifier == com.microsoft.Outlook"', { encoding: "utf-8" }).trim();
+      const script = checkOutlook ? outlookScript : mailScript;
+      const appName = checkOutlook ? "Outlook" : "Mail";
+
+      await fs.writeFile(tmpFile, script);
+      const result = execSync(`osascript ${tmpFile}`, { timeout: 15000, encoding: "utf-8" });
+      console.log(`[browser-agent] ${result.trim()} via ${appName}`);
+      return result.trim() + (attachmentPath ? ` with attachment` : "");
+    } catch (err: any) {
+      console.error("[browser-agent] Send email error:", err.message?.slice(0, 200));
+      return "Couldn't send the email — might need mail app permissions.";
     }
   }
 

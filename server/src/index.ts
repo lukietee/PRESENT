@@ -4,6 +4,7 @@ import express from "express";
 import { Server } from "socket.io";
 import { config } from "./config.js";
 import { twilioRouter, attachMediaStream } from "./phone/twilio.js";
+import { browserAgent } from "./browser-agent/agent.js";
 
 const dashboardOrigins = [
   "http://localhost:3000",
@@ -48,4 +49,14 @@ httpServer.listen(config.port, () => {
       "[config] SERVER_URL is empty — Twilio <Stream> URL in TwiML will be wrong. Use `npm run tunnel:server`, set SERVER_URL to the ngrok host, restart the server, then point Voice webhook at https://<host>/api/twilio/voice (see .env.example).",
     );
   }
+});
+
+// Launch headed browser for tool execution
+browserAgent.init().catch((err) => {
+  console.error("[browser-agent] Failed to launch:", err);
+});
+
+process.on("SIGINT", async () => {
+  await browserAgent.shutdown();
+  process.exit(0);
 });

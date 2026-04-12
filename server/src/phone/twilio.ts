@@ -89,6 +89,8 @@ export function attachMediaStream(httpServer: HttpServer, io: SocketIOServer) {
           break;
 
         case "media": {
+          // Only process inbound audio (caller), ignore outbound (our TTS)
+          if (msg.media!.track !== "inbound") break;
           const audioBuffer = Buffer.from(msg.media!.payload, "base64");
           sendAudio(callSid, audioBuffer);
           break;

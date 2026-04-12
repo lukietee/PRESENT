@@ -36,7 +36,7 @@ export function LiveTranscript({
     <div
       ref={scrollRef}
       className={[
-        "min-h-[5rem] max-h-52 overflow-y-auto space-y-2 px-1 py-1 sm:max-h-60 md:max-h-52",
+        "min-h-[5rem] max-h-[70vh] overflow-y-auto space-y-2 px-1 py-1",
         className,
       ]
         .filter(Boolean)

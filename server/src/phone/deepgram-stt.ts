@@ -2,6 +2,7 @@ import { DeepgramClient } from "@deepgram/sdk";
 import type { Server as SocketIOServer } from "socket.io";
 import { config } from "../config.js";
 import { handleTranscript } from "../brain/orchestrator.js";
+import { clearTwilioAudio } from "./audio-sender.js";
 
 // One Deepgram connection per active call
 const connections = new Map<string, { socket: any; ready: boolean }>();
@@ -33,6 +34,7 @@ export async function createDeepgramStream(callSid: string, io: SocketIOServer) 
 
     if (data.is_final) {
       console.log(`[deepgram] final: ${transcript}`);
+      clearTwilioAudio(callSid); // Stop any AI audio playing (barge-in)
       io.emit("call:transcript", { role: "caller", content: transcript });
       handleTranscript(callSid, transcript, io);
     }

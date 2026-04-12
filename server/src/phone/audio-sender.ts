@@ -3,6 +3,17 @@ import { twilioStreams } from "./twilio.js";
 const FRAME_SIZE = 160; // 20ms at 8kHz mu-law (1 byte per sample)
 
 /**
+ * Clear any queued/playing audio on the Twilio stream (barge-in).
+ */
+export function clearTwilioAudio(callSid: string): void {
+  const stream = twilioStreams.get(callSid);
+  if (!stream) return;
+  try {
+    stream.ws.send(JSON.stringify({ event: "clear", streamSid: stream.streamSid }));
+  } catch {}
+}
+
+/**
  * Send a mu-law audio buffer to the caller via Twilio's media WebSocket.
  * Chunks into 20ms frames as Twilio expects.
  */

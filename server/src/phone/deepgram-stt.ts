@@ -4,8 +4,21 @@ import { config } from "../config.js";
 import { handleTranscript } from "../brain/orchestrator.js";
 import { clearTwilioAudio } from "./audio-sender.js";
 
-// One Deepgram connection per active call
 const connections = new Map<string, { socket: any; ready: boolean }>();
+const utteranceBuffers = new Map<string, string>();
+const debounceTimers = new Map<string, NodeJS.Timeout>();
+
+const DEBOUNCE_SHORT = 150; // Quick response for short complete utterances
+const DEBOUNCE_LONG = 700;  // Wait longer for potentially incomplete sentences
+
+function getDebounceMs(buffer: string): number {
+  const trimmed = buffer.trim();
+  const wordCount = trimmed.split(/\s+/).length;
+  const endsWithPunctuation = /[.?!]$/.test(trimmed);
+  // Short + ends with punctuation = complete thought, respond fast
+  if (wordCount <= 6 && endsWithPunctuation) return DEBOUNCE_SHORT;
+  return DEBOUNCE_LONG;
+}
 
 export async function createDeepgramStream(callSid: string, io: SocketIOServer) {
   const client = new DeepgramClient({ key: config.deepgram.apiKey });
@@ -22,6 +35,7 @@ export async function createDeepgramStream(callSid: string, io: SocketIOServer) 
 
   const entry = { socket, ready: false };
   connections.set(callSid, entry);
+  utteranceBuffers.set(callSid, "");
 
   socket.on("open", () => {
     console.log(`[deepgram] Connection opened — callSid=${callSid}`);
@@ -33,10 +47,31 @@ export async function createDeepgramStream(callSid: string, io: SocketIOServer) 
     if (!transcript) return;
 
     if (data.is_final) {
-      console.log(`[deepgram] final: ${transcript}`);
-      clearTwilioAudio(callSid); // Stop any AI audio playing (barge-in)
-      io.emit("call:transcript", { role: "caller", content: transcript });
-      handleTranscript(callSid, transcript, io);
+      // Accumulate finalized segments
+      const current = utteranceBuffers.get(callSid) || "";
+      utteranceBuffers.set(callSid, current + (current ? " " : "") + transcript);
+      console.log(`[deepgram] segment: ${transcript}`);
+
+      // Clear and reset the debounce timer
+      const existing = debounceTimers.get(callSid);
+      if (existing) clearTimeout(existing);
+
+      // Wait for silence — adaptive timing based on utterance length
+      const debounceMs = getDebounceMs(utteranceBuffers.get(callSid) || "");
+      const timer = setTimeout(() => {
+        const fullUtterance = utteranceBuffers.get(callSid)?.trim();
+        utteranceBuffers.set(callSid, "");
+        debounceTimers.delete(callSid);
+
+        if (fullUtterance) {
+          console.log(`[deepgram] utterance: ${fullUtterance}`);
+          clearTwilioAudio(callSid);
+          io.emit("call:transcript", { role: "caller", content: fullUtterance });
+          handleTranscript(callSid, fullUtterance, io);
+        }
+      }, debounceMs);
+
+      debounceTimers.set(callSid, timer);
     }
   });
 
@@ -47,9 +82,12 @@ export async function createDeepgramStream(callSid: string, io: SocketIOServer) 
   socket.on("close", () => {
     console.log(`[deepgram] Connection closed — callSid=${callSid}`);
     connections.delete(callSid);
+    utteranceBuffers.delete(callSid);
+    const timer = debounceTimers.get(callSid);
+    if (timer) clearTimeout(timer);
+    debounceTimers.delete(callSid);
   });
 
-  // Must call connect() after registering event handlers
   socket.connect();
 }
 
@@ -64,4 +102,8 @@ export function closeDeepgramStream(callSid: string) {
   if (!entry) return;
   entry.socket.close();
   connections.delete(callSid);
+  utteranceBuffers.delete(callSid);
+  const timer = debounceTimers.get(callSid);
+  if (timer) clearTimeout(timer);
+  debounceTimers.delete(callSid);
 }

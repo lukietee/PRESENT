@@ -6,6 +6,8 @@ import twilio from "twilio";
 import { config } from "../config.js";
 import { createDeepgramStream, sendAudio, closeDeepgramStream } from "./deepgram-stt.js";
 import { endSession } from "../brain/orchestrator.js";
+import { synthesize } from "./elevenlabs-tts.js";
+import { sendAudioToTwilio } from "./audio-sender.js";
 
 // ── TwiML webhook route ─────────────────────────────────────────────
 
@@ -86,6 +88,12 @@ export function attachMediaStream(httpServer: HttpServer, io: SocketIOServer) {
           twilioStreams.set(callSid, { ws, streamSid });
           io.emit("call:start", { id: callSid, callerNumber: "unknown" });
           createDeepgramStream(callSid, io);
+
+          // Greet the caller
+          synthesize("Hello?").then((audio) => {
+            sendAudioToTwilio(callSid, audio);
+            io.emit("call:transcript", { role: "agent", content: "Hello?" });
+          }).catch(() => {});
           break;
 
         case "media": {

@@ -139,7 +139,10 @@ export async function* generateResponse(
 
       // Intermediate round — discard Gemini's filler text, play our own filler instead
       if (roundText) console.log(`[gemini] (suppressed intermediate text): ${roundText}`);
-      yield "__TOOL_CALL__";
+      // Yield tool info so orchestrator can emit to dashboard
+      for (const call of functionCalls) {
+        yield `__TOOL_CALL__:${call.name}:${JSON.stringify(call.args)}`;
+      }
 
       // Execute tools and build history entries
       const functionCallParts: any[] = [];

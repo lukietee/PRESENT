@@ -102,9 +102,10 @@ class BrowserAgent {
           path.join(home, "Desktop"),
           path.join(home, "Documents"),
           path.join(home, "Downloads"),
-          home,
         ];
 
+    // Only find actual documents, not code files
+    const docExts = [".docx", ".doc", ".pdf", ".xlsx", ".xls", ".pptx", ".ppt", ".txt", ".csv", ".rtf", ".pages", ".numbers", ".key"];
     const results: string[] = [];
     const searchTerms = search?.toLowerCase().split(/\s+/) || [];
 
@@ -113,30 +114,32 @@ class BrowserAgent {
         const entries = await fs.readdir(searchDir, { withFileTypes: true, recursive: true });
         for (const entry of entries) {
           if (!entry.isFile()) continue;
-          // Skip hidden files and node_modules
-          if (entry.name.startsWith(".")) continue;
+          if (entry.name.startsWith(".") || entry.name.startsWith("~$")) continue;
           const fullPath = path.join(entry.parentPath || searchDir, entry.name);
           if (fullPath.includes("node_modules") || fullPath.includes(".git")) continue;
+
+          // Only document files
+          const ext = path.extname(entry.name).toLowerCase();
+          if (!docExts.includes(ext)) continue;
 
           if (searchTerms.length > 0) {
             const nameLower = entry.name.toLowerCase();
             const pathLower = fullPath.toLowerCase();
-            // Match if ANY search term appears in the filename or path
             const matches = searchTerms.some(term => nameLower.includes(term) || pathLower.includes(term));
             if (!matches) continue;
           }
 
           results.push(fullPath);
-          if (results.length >= 30) break;
+          if (results.length >= 10) break;
         }
       } catch {}
-      if (results.length >= 30) break;
+      if (results.length >= 10) break;
     }
 
-    console.log(`[browser-agent] Found ${results.length} files for search: ${search}`);
+    console.log(`[browser-agent] Found ${results.length} docs for search: ${search}`);
     return results.length > 0
-      ? `Files found:\n${results.join("\n")}`
-      : `No files found matching "${search}". Try a different search term.`;
+      ? `Documents found:\n${results.join("\n")}\n\nCall open_file with the path to open and read the document.`
+      : `No documents found matching "${search}". Try different keywords.`;
   }
 
   private async openFile(filePath: string): Promise<string> {

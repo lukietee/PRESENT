@@ -57,17 +57,38 @@ export async function handleTranscript(
   let roundText = "";
   let sentenceBuffer = "";
   let allText = "";
+  let fillerPlayed = false;
 
   try {
     for await (const chunk of generateResponse(history, PHONE_SYSTEM_PROMPT, browserAgent.execute.bind(browserAgent))) {
-      if (chunk === "__TOOL_CALL__") {
+      if (chunk.startsWith("__TOOL_CALL__")) {
+        // Parse tool info and emit to dashboard
+        const parts = chunk.split(":");
+        if (parts.length >= 3) {
+          const toolName = parts[1];
+          const toolArgs = parts.slice(2).join(":");
+          try {
+            io.emit("call:transcript", {
+              role: "tool",
+              content: `🔧 ${toolName}(${toolArgs})`,
+            });
+          } catch {}
+        }
         // Flush any remaining text from this round before tool executes
         if (sentenceBuffer.trim()) {
           await speakAndEmit(sentenceBuffer.trim(), callSid, io);
           sentenceBuffer = "";
         }
 
-        // Reset for next round — no filler, Gemini handles it naturally
+        // Play a short filler only on the first tool round so caller doesn't hear dead silence
+        if (!fillerPlayed) {
+          fillerPlayed = true;
+          try {
+            const audio = await synthesize("Yeah, give me one sec.");
+            sendAudioToTwilio(callSid, audio);
+          } catch {}
+        }
+
         roundText = "";
         continue;
       }

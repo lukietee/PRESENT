@@ -4,6 +4,8 @@
 
 Present! picks up incoming phone calls, speaks in your cloned voice, and handles real tasks — searching files, reading documents, checking your calendar, creating events, and sending emails with attachments. You monitor everything in real-time from a live dashboard.
 
+[![Watch the video](https://img.youtube.com/vi/orEyFLXu-iw/maxresdefault.jpg)](https://youtu.be/orEyFLXu-iw)
+
 ## Demo
 
 Call the Twilio number. The AI agent answers as you, has a natural conversation, and executes tasks on your computer — all while you watch the live transcript and approve tool calls from the dashboard.
